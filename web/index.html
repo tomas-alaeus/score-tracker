@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Score Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#0c0c15">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Scores">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Orbitron:wght@700&family=Cinzel:wght@700&family=Russo+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Fullscreen">⤢</button>
+
+  <!-- ── GAME SELECT ── -->
+  <div id="game-select">
+    <div class="select-header">
+      <div class="select-title">Score Tracker</div>
+      <div class="select-sub">Board game companion</div>
+    </div>
+    <div class="game-tiles"></div>
+  </div>
+
+  <!-- ── GAME PLAY ── -->
+  <div id="game-play">
+    <div class="topbar">
+      <button class="topbar-back" onclick="backToSelect()">← Games</button>
+      <div class="topbar-title" id="game-title"></div>
+      <div class="topbar-spacer"></div>
+    </div>
+    <div id="players"></div>
+    <div id="controls"></div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

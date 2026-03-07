@@ -1,0 +1,319 @@
+import { GAMES, PLAYER_COLOR_VALUES } from './config.js';
+import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation } from './render.js';
+import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
+
+// ── State ──
+
+let players = [];
+let currentGame = null;
+let gameStartScore = 0;
+let selectedGameId = Object.keys(GAMES)[0];
+let selectedPlayerCount = GAMES[selectedGameId].defaultPlayers;
+
+const holds = new Map(); // pointerId → { timeout, el }
+const deltaState = {};
+
+// ── Wake lock ──
+
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+  } catch (e) { /* not supported or denied — fail silently */ }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (currentGame && document.visibilityState === 'visible') requestWakeLock();
+});
+
+// ── Theme ──
+
+function applyTheme(theme) {
+  const s = document.documentElement.style;
+  for (const [prop, val] of Object.entries(theme)) s.setProperty(prop, val);
+}
+
+function resetTheme() {
+  ['--bg', '--card-bg', '--border', '--accent', '--text', '--game-font'].forEach(p =>
+    document.documentElement.style.removeProperty(p)
+  );
+}
+
+// ── Views ──
+
+function selectPreset(id) {
+  const game = GAMES[id];
+  if (!game) return;
+  if (id !== selectedGameId) {
+    selectedGameId = id;
+    selectedPlayerCount = game.defaultPlayers;
+  }
+  document.querySelectorAll('.preset-btn').forEach(btn =>
+    btn.classList.toggle('selected', btn.dataset.id === id)
+  );
+  renderConfig(game, selectedPlayerCount);
+}
+
+function startGame() {
+  const id = selectedGameId;
+  const game = GAMES[id];
+  if (!game) return;
+  currentGame = game;
+
+  const count = selectedPlayerCount;
+
+  gameStartScore = game.defaultStart;
+  const hpInput = document.getElementById('start-hp');
+  if (hpInput) gameStartScore = Math.max(1, parseInt(hpInput.value) || game.defaultStart);
+
+  applyTheme(game.theme);
+  document.getElementById('game-title').textContent = `${game.name} ${game.emoji}`;
+
+  const savedRotations = loadRotations();
+  const shuffledColors = game.playerColors ? shuffleArray([...game.playerColors]) : [];
+  players = [];
+  for (let i = 0; i < count; i++) {
+    const rotation = savedRotations[i] ?? (i === 0 ? 180 : 0);
+    const color = shuffledColors[i] ?? null;
+    players.push(createPlayer('Player ' + (i + 1), rotation, color));
+  }
+
+  document.getElementById('game-select').style.display = 'none';
+  document.getElementById('game-play').style.display = 'flex';
+  requestWakeLock();
+  render(players, currentGame);
+  saveState(currentGame, gameStartScore, players);
+}
+
+function backToSelect() {
+  releaseWakeLock();
+  resetTheme();
+  players = [];
+  currentGame = null;
+  gameStartScore = 0;
+  document.getElementById('game-play').style.display = 'none';
+  document.getElementById('game-select').style.display = '';
+  saveState(currentGame, gameStartScore, players);
+}
+
+// ── Player count steppers ──
+
+function stepPlayers(delta) {
+  const game = GAMES[selectedGameId];
+  const next = Math.max(game.minPlayers, Math.min(game.maxPlayers, selectedPlayerCount + delta));
+  selectedPlayerCount = next;
+  document.getElementById('players-val').textContent = next;
+  document.getElementById('players-dec').disabled = next <= game.minPlayers;
+  document.getElementById('players-inc').disabled = next >= game.maxPlayers;
+}
+
+// ── Rotation ──
+
+function toggleRotate(id) {
+  const p = players.find(p => p.id === id);
+  if (!p) return;
+  p.rotation = (p.rotation + 90) % 360;
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (slot && card) applyRotation(slot, card, p.rotation);
+  saveRotations(players);
+  saveState(currentGame, gameStartScore, players);
+}
+
+window.addEventListener('resize', () => reapplyAllRotations(players));
+
+// ── Settings overlay ──
+
+function openSettings(id) {
+  document.querySelectorAll('.player-card.settings-open').forEach(c => c.classList.remove('settings-open'));
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (card) card.classList.add('settings-open');
+}
+
+function closeAllSettings() {
+  document.querySelectorAll('.player-card.settings-open').forEach(c => c.classList.remove('settings-open'));
+}
+
+function rotateFromOverlay(id) {
+  toggleRotate(id);
+}
+
+function setPlayerColor(id, color) {
+  const p = players.find(p => p.id === id);
+  if (!p || !currentGame || !currentGame.playerColors) return;
+  p.color = color;
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (card) {
+    const dot = card.querySelector('.color-dot');
+    if (dot) dot.style.background = PLAYER_COLOR_VALUES[color] || '#888';
+    const nameEl = card.querySelector('.color-name');
+    if (nameEl) nameEl.textContent = color;
+    card.querySelectorAll('.color-swatch').forEach(sw => {
+      sw.classList.toggle('active', sw.dataset.color === color);
+    });
+  }
+  saveState(currentGame, gameStartScore, players);
+}
+
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.card-overlay') && !e.target.closest('.settings-btn')) closeAllSettings();
+});
+
+// ── Players ──
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function createPlayer(name, rotation = 0, color = null) {
+  return { id: Date.now() + Math.random(), name, score: gameStartScore, rotation, color };
+}
+
+// ── Score ──
+
+function changeScore(id, delta) {
+  const p = players.find(p => p.id === id);
+  if (!p) return;
+
+  const isDown = currentGame && currentGame.direction === 'down';
+  if (isDown && delta < 0 && p.score === 0) { vibrate(80); return; }
+
+  p.score += delta;
+  if (isDown && p.score < 0) p.score = 0;
+
+  vibrate(isDown && p.score === 0 ? [30, 40, 60] : 18);
+
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (card) {
+    const scoreEl = card.querySelector('.score');
+    if (scoreEl) {
+      scoreEl.textContent = p.score;
+      scoreEl.classList.remove('score-bump');
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add('score-bump');
+    }
+    const eliminated = isDown && p.score === 0;
+    card.classList.toggle('eliminated', eliminated);
+    const tapSub = card.querySelector('.tap-sub');
+    if (tapSub) tapSub.classList.toggle('disabled', eliminated);
+  }
+
+  updateLeaderHighlight(players);
+  showDelta(id, delta);
+  saveState(currentGame, gameStartScore, players);
+}
+
+// ── Delta display ──
+
+function showDelta(id, delta) {
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null };
+  const s = deltaState[id];
+  s.value += delta;
+  clearTimeout(s.timer);
+
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (!card) return;
+  const pos = card.querySelector('.delta-pos');
+  const neg = card.querySelector('.delta-neg');
+  const v = s.value;
+
+  function show(el, text) { el.style.transition = 'none'; el.style.opacity = '1'; el.textContent = text; }
+  function hideNow(el)    { el.style.transition = 'none'; el.style.opacity = '0'; }
+  function hideFade(el)   { el.style.transition = 'opacity 0.4s ease'; el.style.opacity = '0'; }
+
+  if (v > 0)      { hideNow(neg); show(pos, '+' + v); }
+  else if (v < 0) { hideNow(pos); show(neg, '' + v); }
+  else            { hideNow(pos); hideNow(neg); s.value = 0; return; }
+
+  s.timer = setTimeout(() => { hideFade(pos); hideFade(neg); s.value = 0; }, 2000);
+}
+
+// ── Hold-to-repeat (per-pointer so multiple touches work independently) ──
+
+function startHold(pointerId, id, delta, el) {
+  stopHold(pointerId);
+  if (el) el.classList.add('pressing');
+  changeScore(id, delta);
+  let interval = 300;
+  const minInterval = 60;
+  const state = { el };
+  holds.set(pointerId, state);
+  state.timeout = setTimeout(function repeat() {
+    if (!holds.has(pointerId)) return;
+    changeScore(id, delta);
+    interval = Math.max(minInterval, interval * 0.8);
+    state.timeout = setTimeout(repeat, interval);
+  }, 400);
+}
+
+function stopHold(pointerId) {
+  const state = holds.get(pointerId);
+  if (state) {
+    clearTimeout(state.timeout);
+    if (state.el) state.el.classList.remove('pressing');
+    holds.delete(pointerId);
+  }
+}
+
+// ── Fullscreen ──
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fullscreen-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '⤡' : '⤢';
+});
+
+// ── Haptics ──
+
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ── Expose to inline HTML event handlers ──
+
+Object.assign(window, {
+  startGame, backToSelect, selectPreset, stepPlayers, toggleFullscreen,
+  startHold, stopHold, openSettings, closeAllSettings, rotateFromOverlay, setPlayerColor,
+});
+
+// ── Init ──
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+renderTiles(GAMES);
+selectPreset(selectedGameId);
+
+const saved = restoreState();
+if (saved) {
+  currentGame = saved.game;
+  gameStartScore = saved.gameStartScore;
+  players = saved.players;
+  applyTheme(saved.game.theme);
+  document.getElementById('game-title').textContent = `${saved.game.name} ${saved.game.emoji}`;
+  document.getElementById('game-select').style.display = 'none';
+  document.getElementById('game-play').style.display = 'flex';
+  requestWakeLock();
+  render(players, currentGame);
+}
