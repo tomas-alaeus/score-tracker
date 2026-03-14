@@ -1,10 +1,11 @@
 import { GAMES } from './config.js';
 
-export function saveState(currentGame, gameStartScore, players) {
+export function saveState(currentGame, gameStartScore, vpPool, players) {
   if (!currentGame) { localStorage.removeItem('st-state'); return; }
   localStorage.setItem('st-state', JSON.stringify({
     gameId: Object.keys(GAMES).find(k => GAMES[k] === currentGame),
     gameStartScore,
+    vpPool,
     players: players.map(({ id, name, score, rotation, color }) => ({ id, name, score, rotation, color })),
   }));
 }
@@ -25,10 +26,10 @@ export function restoreState() {
   try {
     const raw = localStorage.getItem('st-state');
     if (!raw) return null;
-    const { gameId, gameStartScore, players } = JSON.parse(raw);
+    const { gameId, gameStartScore, vpPool, players } = JSON.parse(raw);
     const game = GAMES[gameId];
     if (!game) return null;
-    return { game, gameStartScore, players };
+    return { game, gameStartScore, vpPool, players };
   } catch (e) {
     localStorage.removeItem('st-state');
     return null;

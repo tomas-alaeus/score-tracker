@@ -72,6 +72,7 @@ export const GAMES = {
     defaultPlayers: 2,
     defaultStart: 0,
     startField: null,
+    vpTokens: true,
     tile: {
       bg: '#0c0920',
       border: '#30246a',

@@ -285,6 +285,51 @@ body::after {
   flex-direction: unset;
 }
 
+#players.has-vp-pool { position: relative; }
+
+.vp-pool {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(13, 12, 34, 0.85);
+  border: 1px solid var(--border, #342872);
+  border-radius: 12px;
+  padding: 6px 14px;
+  pointer-events: none;
+  z-index: 10;
+  min-width: 64px;
+}
+
+.vp-pool-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text, #ccc0ff);
+  opacity: 0.6;
+  font-family: var(--game-font, sans-serif);
+}
+
+.vp-pool-count {
+  font-size: 1.6rem;
+  font-family: var(--game-font, sans-serif);
+  color: var(--accent, #8858e0);
+  line-height: 1;
+}
+
+.vp-pool-total {
+  font-size: 0.65rem;
+  color: var(--text, #ccc0ff);
+  opacity: 0.5;
+  font-family: var(--game-font, sans-serif);
+}
+
+.vp-pool.depleted .vp-pool-count { color: #ff6040; }
+.vp-pool.depleted { border-color: #ff6040; }
+
 /* Slot holds flex space; card is positioned absolutely inside */
 .card-slot {
   position: relative;

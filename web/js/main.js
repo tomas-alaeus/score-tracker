@@ -1,5 +1,5 @@
 import { GAMES, PLAYER_COLOR_VALUES } from './config.js';
-import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation } from './render.js';
+import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation, updateVpPool } from './render.js';
 import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
 
 // ── State ──
@@ -7,6 +7,7 @@ import { saveState, restoreState, saveRotations, loadRotations } from './persist
 let players = [];
 let currentGame = null;
 let gameStartScore = 0;
+let vpPool = null;
 let selectedGameId = Object.keys(GAMES)[0];
 let selectedPlayerCount = GAMES[selectedGameId].defaultPlayers;
 
@@ -82,12 +83,14 @@ function startGame() {
     const color = shuffledColors[i] ?? null;
     players.push(createPlayer('Player ' + (i + 1), rotation, color));
   }
+  vpPool = game.vpTokens ? 12 * count : null;
 
   document.getElementById('game-select').style.display = 'none';
   document.getElementById('game-play').style.display = 'flex';
   requestWakeLock();
   render(players, currentGame);
-  saveState(currentGame, gameStartScore, players);
+  if (vpPool !== null) updateVpPool(vpPool, 12 * players.length);
+  saveState(currentGame, gameStartScore, vpPool, players);
 }
 
 function backToSelect() {
@@ -96,9 +99,10 @@ function backToSelect() {
   players = [];
   currentGame = null;
   gameStartScore = 0;
+  vpPool = null;
   document.getElementById('game-play').style.display = 'none';
   document.getElementById('game-select').style.display = '';
-  saveState(currentGame, gameStartScore, players);
+  saveState(currentGame, gameStartScore, vpPool, players);
 }
 
 // ── Player count steppers ──
@@ -122,7 +126,7 @@ function toggleRotate(id) {
   const card = slot ? slot.querySelector('.player-card') : null;
   if (slot && card) applyRotation(slot, card, p.rotation);
   saveRotations(players);
-  saveState(currentGame, gameStartScore, players);
+  saveState(currentGame, gameStartScore, vpPool, players);
 }
 
 window.addEventListener('resize', () => reapplyAllRotations(players));
@@ -159,7 +163,7 @@ function setPlayerColor(id, color) {
       sw.classList.toggle('active', sw.dataset.color === color);
     });
   }
-  saveState(currentGame, gameStartScore, players);
+  saveState(currentGame, gameStartScore, vpPool, players);
 }
 
 document.addEventListener('pointerdown', e => {
@@ -210,9 +214,14 @@ function changeScore(id, delta) {
     if (tapSub) tapSub.classList.toggle('disabled', eliminated);
   }
 
+  if (currentGame && currentGame.vpTokens && vpPool !== null) {
+    vpPool -= delta;
+    updateVpPool(vpPool, 12 * players.length);
+  }
+
   updateLeaderHighlight(players);
   showDelta(id, delta);
-  saveState(currentGame, gameStartScore, players);
+  saveState(currentGame, gameStartScore, vpPool, players);
 }
 
 // ── Delta display ──
@@ -316,4 +325,8 @@ if (saved) {
   document.getElementById('game-play').style.display = 'flex';
   requestWakeLock();
   render(players, currentGame);
+  if (saved.game.vpTokens) {
+    vpPool = saved.vpPool ?? (12 * players.length - players.reduce((s, p) => s + (p.score - gameStartScore), 0));
+    updateVpPool(vpPool, 12 * players.length);
+  }
 }

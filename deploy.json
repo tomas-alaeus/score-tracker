@@ -1,4 +1,5 @@
 {
+  "target": "one.com",
   "local_folder": "web",
   "remote_folder": "ScoreTracker"
 }

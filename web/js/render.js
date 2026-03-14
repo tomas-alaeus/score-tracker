@@ -94,6 +94,13 @@ export function reapplyAllRotations(players) {
   });
 }
 
+export function updateVpPool(pool, total) {
+  const el = document.getElementById('vp-pool');
+  if (!el) return;
+  el.querySelector('.vp-pool-count').textContent = pool;
+  el.classList.toggle('depleted', pool <= 0);
+}
+
 export function render(players, currentGame) {
   const leaderId = getLeaderId(players);
   const isDown = currentGame && currentGame.direction === 'down';
@@ -147,6 +154,19 @@ export function render(players, currentGame) {
         </div>
       </div>`;
   }).join('');
+
+  if (currentGame && currentGame.vpTokens) {
+    playersEl.classList.add('has-vp-pool');
+    const total = 12 * players.length;
+    playersEl.insertAdjacentHTML('beforeend', `
+      <div id="vp-pool" class="vp-pool">
+        <div class="vp-pool-label">VP Pool</div>
+        <div class="vp-pool-count">—</div>
+        <div class="vp-pool-total">/ ${total}</div>
+      </div>`);
+  } else {
+    playersEl.classList.remove('has-vp-pool');
+  }
 
   requestAnimationFrame(() => reapplyAllRotations(players));
 }
