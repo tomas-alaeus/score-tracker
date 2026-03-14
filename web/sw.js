@@ -1,4 +1,4 @@
-const CACHE = 'scoretracker-static-v1';
+const CACHE = 'scoretracker-v3';
 const STATIC_ASSETS = [
   '/projects/ScoreTracker/icon-192.png',
   '/projects/ScoreTracker/icon-512.png',
@@ -36,9 +36,9 @@ self.addEventListener('fetch', e => {
     );
   } else {
     // Network-first for everything else (HTML, JS, CSS, JSON)
-    // Always serves fresh content; falls back to cache when offline
+    // cache:'reload' bypasses the browser HTTP cache so we always get fresh bytes
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'reload' }).then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
