@@ -226,19 +226,39 @@ function changeScore(id, delta) {
 
 // ── Delta display ──
 
-function getFarSide(event, el) {
-  const rect = el.closest('.player-card').getBoundingClientRect();
-  const dx = event.clientX - (rect.left + rect.width / 2);
-  const dy = event.clientY - (rect.top + rect.height / 2);
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx > 0 ? 'left' : 'right';
-  } else {
-    return dy > 0 ? 'top' : 'bottom';
-  }
+function getFarSideOffset(event, card) {
+  const rect = card.getBoundingClientRect();
+  const cardW = card.offsetWidth;
+  const cardH = card.offsetHeight;
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = event.clientX - cx;
+  const dy = event.clientY - cy;
+
+  // Rotate far-side direction from screen space into card local space.
+  // CSS rotate(R) maps local→screen as: sx = lx·cos(R) - ly·sin(R), sy = lx·sin(R) + ly·cos(R)
+  // Inverse: lx = sx·cos(R) + sy·sin(R), ly = -sx·sin(R) + sy·cos(R)
+  const R = (parseFloat(card.dataset.rotation) || 0) * Math.PI / 180;
+  const fdx = -dx, fdy = -dy;
+  const localX = fdx * Math.cos(R) + fdy * Math.sin(R);
+  const localY = -fdx * Math.sin(R) + fdy * Math.cos(R);
+
+  const mag = Math.sqrt(localX * localX + localY * localY);
+  if (mag < 1) return { x: 0, y: -(cardH * 0.38) };
+
+  const nx = localX / mag, ny = localY / mag;
+
+  // Scale to 75% of the way to the card edge in the local direction.
+  const hw = cardW / 2, hh = cardH / 2;
+  const tx = Math.abs(nx) > 0.001 ? hw / Math.abs(nx) : Infinity;
+  const ty = Math.abs(ny) > 0.001 ? hh / Math.abs(ny) : Infinity;
+  const t = Math.min(tx, ty) * 0.75;
+
+  return { x: nx * t, y: ny * t };
 }
 
 function showDelta(id, delta) {
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, pos: 'top' };
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset: { x: 0, y: 0 } };
   const s = deltaState[id];
   s.value += delta;
   clearTimeout(s.timer);
@@ -247,26 +267,21 @@ function showDelta(id, delta) {
   const card = slot ? slot.querySelector('.player-card') : null;
   if (!card) return;
 
-  const anchors = card.querySelectorAll('.delta-anchor');
-  const active = card.querySelector('.delta-anchor.delta-' + s.pos);
+  const anchor = card.querySelector('.delta-anchor');
+  if (!anchor) return;
   const v = s.value;
+  const { x, y } = s.offset || { x: 0, y: 0 };
 
-  function hideNow(el)  { el.style.transition = 'none'; el.style.opacity = '0'; }
-  function hideFade(el) { el.style.transition = 'opacity 0.4s ease'; el.style.opacity = '0'; }
+  if (v === 0) { anchor.style.transition = 'none'; anchor.style.opacity = '0'; s.value = 0; return; }
 
-  anchors.forEach(a => { if (a !== active) hideNow(a); });
+  anchor.style.transition = 'none';
+  anchor.style.opacity = '1';
+  anchor.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  anchor.textContent = v > 0 ? '+' + v : '' + v;
+  anchor.classList.toggle('delta-pos', v > 0);
+  anchor.classList.toggle('delta-neg', v < 0);
 
-  if (v === 0) { if (active) hideNow(active); s.value = 0; return; }
-
-  if (active) {
-    active.style.transition = 'none';
-    active.style.opacity = '1';
-    active.textContent = v > 0 ? '+' + v : '' + v;
-    active.classList.toggle('delta-pos', v > 0);
-    active.classList.toggle('delta-neg', v < 0);
-  }
-
-  s.timer = setTimeout(() => { anchors.forEach(hideFade); s.value = 0; }, 2000);
+  s.timer = setTimeout(() => { anchor.style.transition = 'opacity 0.4s ease'; anchor.style.opacity = '0'; s.value = 0; }, 2000);
 }
 
 // ── Hold-to-repeat (per-pointer so multiple touches work independently) ──
@@ -275,9 +290,10 @@ function startHold(event, id, delta, el) {
   const pointerId = event.pointerId;
   stopHold(pointerId);
   if (el) el.classList.add('pressing');
-  const pos = getFarSide(event, el);
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, pos };
-  else deltaState[id].pos = pos;
+  const card = el.closest('.player-card');
+  const offset = getFarSideOffset(event, card);
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset };
+  else deltaState[id].offset = offset;
   changeScore(id, delta);
   let interval = 300;
   const minInterval = 60;

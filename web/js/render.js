@@ -84,6 +84,7 @@ export function applyRotation(slot, card, deg) {
     card.style.top    = '0';
   }
   card.style.transform = 'rotate(' + deg + 'deg)';
+  card.dataset.rotation = deg;
 }
 
 export function reapplyAllRotations(players) {
@@ -127,7 +128,7 @@ export function render(players, currentGame) {
 
     return `
       <div class="card-slot" data-id="${p.id}">
-        <div class="player-card${p.id === leaderId ? ' leading' : ''}${eliminated ? ' eliminated' : ''}">
+        <div class="player-card${p.id === leaderId ? ' leading' : ''}${eliminated ? ' eliminated' : ''}" data-rotation="${p.rotation}">
           <div class="elim-badge">ELIMINATED</div>
           <div class="card-overlay" onpointerdown="if(event.target===this)closeAllSettings()">
             <button class="overlay-rotate-btn" onclick="rotateFromOverlay(${p.id})">↻</button>
@@ -146,10 +147,7 @@ export function render(players, currentGame) {
             <div class="arrow-icon arrow-down"></div>
           </div>
           <div class="score-wrap">
-            <span class="delta-anchor delta-top"></span>
-            <span class="delta-anchor delta-bottom"></span>
-            <span class="delta-anchor delta-left"></span>
-            <span class="delta-anchor delta-right"></span>
+            <span class="delta-anchor"></span>
             <span class="score">${p.score}</span>
           </div>
           ${colorIndicator}

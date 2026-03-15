@@ -556,14 +556,12 @@ body::after {
   pointer-events: none;
   opacity: 0;
   position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
   white-space: nowrap;
 }
-
-.delta-top    { top: 8%;    left: 50%;  transform: translateX(-50%); }
-.delta-bottom { bottom: 8%; left: 50%;  transform: translateX(-50%); }
-.delta-left   { top: 50%;   left: 6%;   transform: translateY(-50%); }
-.delta-right  { top: 50%;   right: 6%;  transform: translateY(-50%); }
 
 .delta-pos { color: #40e880; }
 .delta-neg { color: #f04848; }
