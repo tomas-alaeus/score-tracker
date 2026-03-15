@@ -355,7 +355,7 @@ function startHold(event, id, delta, el) {
   if (el) el.classList.add('pressing');
   const card = el.closest('.player-card');
   const offset = getFarSideOffset(event, card);
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset };
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset, cur: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, rafId: null, lastTime: 0 };
   else deltaState[id].offset = offset;
   changeScore(id, delta);
   let interval = 300;
