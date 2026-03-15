@@ -252,7 +252,7 @@ function getFarSideOffset(event, card) {
   const hw = cardW / 2, hh = cardH / 2;
   const tx = Math.abs(nx) > 0.001 ? hw / Math.abs(nx) : Infinity;
   const ty = Math.abs(ny) > 0.001 ? hh / Math.abs(ny) : Infinity;
-  const t = Math.min(tx, ty) * 0.75;
+  const t = Math.min(tx, ty) * 0.55;
 
   return { x: nx * t, y: ny * t };
 }
