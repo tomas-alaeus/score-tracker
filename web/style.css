@@ -550,16 +550,20 @@ body::after {
   z-index: 1;
 }
 
-.delta-side {
+.delta-anchor {
   font-family: 'DM Mono', monospace;
   font-size: 2.8rem;
   pointer-events: none;
   opacity: 0;
-  min-width: 2.2ch;
-  min-height: 1em;
+  position: absolute;
   text-align: center;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
+
+.delta-top    { top: 8%;    left: 50%;  transform: translateX(-50%); }
+.delta-bottom { bottom: 8%; left: 50%;  transform: translateX(-50%); }
+.delta-left   { top: 50%;   left: 6%;   transform: translateY(-50%); }
+.delta-right  { top: 50%;   right: 6%;  transform: translateY(-50%); }
 
 .delta-pos { color: #40e880; }
 .delta-neg { color: #f04848; }

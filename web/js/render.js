@@ -136,18 +136,20 @@ export function render(players, currentGame) {
           </div>
           <button class="settings-btn" onclick="openSettings(${p.id})">···</button>
           <div class="tap-zone tap-add"
-            onpointerdown="startHold(event.pointerId,${p.id},1,this)"
+            onpointerdown="startHold(event,${p.id},1,this)"
             onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
-            <span class="delta-side delta-pos"></span>
             <div class="arrow-icon arrow-up"></div>
           </div>
           <div class="tap-zone tap-sub${eliminated ? ' disabled' : ''}"
-            onpointerdown="if(!this.classList.contains('disabled'))startHold(event.pointerId,${p.id},-1,this)"
+            onpointerdown="if(!this.classList.contains('disabled'))startHold(event,${p.id},-1,this)"
             onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
             <div class="arrow-icon arrow-down"></div>
-            <span class="delta-side delta-neg"></span>
           </div>
           <div class="score-wrap">
+            <span class="delta-anchor delta-top"></span>
+            <span class="delta-anchor delta-bottom"></span>
+            <span class="delta-anchor delta-left"></span>
+            <span class="delta-anchor delta-right"></span>
             <span class="score">${p.score}</span>
           </div>
           ${colorIndicator}

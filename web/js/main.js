@@ -226,8 +226,19 @@ function changeScore(id, delta) {
 
 // ── Delta display ──
 
+function getFarSide(event, el) {
+  const rect = el.closest('.player-card').getBoundingClientRect();
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx > 0 ? 'left' : 'right';
+  } else {
+    return dy > 0 ? 'top' : 'bottom';
+  }
+}
+
 function showDelta(id, delta) {
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null };
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, pos: 'top' };
   const s = deltaState[id];
   s.value += delta;
   clearTimeout(s.timer);
@@ -235,26 +246,38 @@ function showDelta(id, delta) {
   const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
   const card = slot ? slot.querySelector('.player-card') : null;
   if (!card) return;
-  const pos = card.querySelector('.delta-pos');
-  const neg = card.querySelector('.delta-neg');
+
+  const anchors = card.querySelectorAll('.delta-anchor');
+  const active = card.querySelector('.delta-anchor.delta-' + s.pos);
   const v = s.value;
 
-  function show(el, text) { el.style.transition = 'none'; el.style.opacity = '1'; el.textContent = text; }
-  function hideNow(el)    { el.style.transition = 'none'; el.style.opacity = '0'; }
-  function hideFade(el)   { el.style.transition = 'opacity 0.4s ease'; el.style.opacity = '0'; }
+  function hideNow(el)  { el.style.transition = 'none'; el.style.opacity = '0'; }
+  function hideFade(el) { el.style.transition = 'opacity 0.4s ease'; el.style.opacity = '0'; }
 
-  if (v > 0)      { hideNow(neg); show(pos, '+' + v); }
-  else if (v < 0) { hideNow(pos); show(neg, '' + v); }
-  else            { hideNow(pos); hideNow(neg); s.value = 0; return; }
+  anchors.forEach(a => { if (a !== active) hideNow(a); });
 
-  s.timer = setTimeout(() => { hideFade(pos); hideFade(neg); s.value = 0; }, 2000);
+  if (v === 0) { if (active) hideNow(active); s.value = 0; return; }
+
+  if (active) {
+    active.style.transition = 'none';
+    active.style.opacity = '1';
+    active.textContent = v > 0 ? '+' + v : '' + v;
+    active.classList.toggle('delta-pos', v > 0);
+    active.classList.toggle('delta-neg', v < 0);
+  }
+
+  s.timer = setTimeout(() => { anchors.forEach(hideFade); s.value = 0; }, 2000);
 }
 
 // ── Hold-to-repeat (per-pointer so multiple touches work independently) ──
 
-function startHold(pointerId, id, delta, el) {
+function startHold(event, id, delta, el) {
+  const pointerId = event.pointerId;
   stopHold(pointerId);
   if (el) el.classList.add('pressing');
+  const pos = getFarSide(event, el);
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, pos };
+  else deltaState[id].pos = pos;
   changeScore(id, delta);
   let interval = 300;
   const minInterval = 60;
