@@ -552,7 +552,7 @@ body::after {
 
 .delta-side {
   font-family: 'DM Mono', monospace;
-  font-size: 1.4rem;
+  font-size: 2.8rem;
   pointer-events: none;
   opacity: 0;
   min-width: 2.2ch;
