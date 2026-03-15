@@ -257,8 +257,51 @@ function getFarSideOffset(event, card) {
   return { x: nx * t, y: ny * t };
 }
 
+// SmoothDamp — matches Unity's Mathf.SmoothDamp behaviour.
+function smoothDamp(current, target, velocity, smoothTime, dt) {
+  smoothTime = Math.max(0.0001, smoothTime);
+  const omega = 2 / smoothTime;
+  const x = omega * dt;
+  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = current - target;
+  const temp = (velocity + omega * change) * dt;
+  let newVel = (velocity - omega * temp) * exp;
+  let out = target + (change + temp) * exp;
+  // Prevent overshoot
+  if ((target - current > 0) === (out > target)) { out = target; newVel = 0; }
+  return { value: out, velocity: newVel };
+}
+
+function animateDelta(id) {
+  const s = deltaState[id];
+  if (!s) return;
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  const anchor = card ? card.querySelector('.delta-anchor') : null;
+  if (!anchor) { s.rafId = null; return; }
+
+  const now = performance.now();
+  const dt = Math.min((now - s.lastTime) / 1000, 0.05);
+  s.lastTime = now;
+
+  const rx = smoothDamp(s.cur.x, s.offset.x, s.vel.x, 0.18, dt);
+  const ry = smoothDamp(s.cur.y, s.offset.y, s.vel.y, 0.18, dt);
+  s.cur.x = rx.value; s.vel.x = rx.velocity;
+  s.cur.y = ry.value; s.vel.y = ry.velocity;
+
+  anchor.style.transform = `translate(calc(-50% + ${s.cur.x}px), calc(-50% + ${s.cur.y}px))`;
+
+  if (Math.abs(s.offset.x - s.cur.x) > 0.5 || Math.abs(s.offset.y - s.cur.y) > 0.5) {
+    s.rafId = requestAnimationFrame(() => animateDelta(id));
+  } else {
+    s.cur.x = s.offset.x; s.cur.y = s.offset.y;
+    anchor.style.transform = `translate(calc(-50% + ${s.offset.x}px), calc(-50% + ${s.offset.y}px))`;
+    s.rafId = null;
+  }
+}
+
 function showDelta(id, delta) {
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset: { x: 0, y: 0 } };
+  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset: { x: 0, y: 0 }, cur: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, rafId: null, lastTime: 0 };
   const s = deltaState[id];
   s.value += delta;
   clearTimeout(s.timer);
@@ -270,18 +313,38 @@ function showDelta(id, delta) {
   const anchor = card.querySelector('.delta-anchor');
   if (!anchor) return;
   const v = s.value;
-  const { x, y } = s.offset || { x: 0, y: 0 };
 
-  if (v === 0) { anchor.style.transition = 'none'; anchor.style.opacity = '0'; s.value = 0; return; }
+  if (v === 0) {
+    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
+    anchor.style.transition = 'none'; anchor.style.opacity = '0'; s.value = 0; return;
+  }
+
+  const wasVisible = parseFloat(anchor.style.opacity || '0') > 0;
+  if (!wasVisible) {
+    // First appearance — snap to position immediately.
+    s.cur.x = s.offset.x; s.cur.y = s.offset.y;
+    s.vel.x = 0; s.vel.y = 0;
+    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
+    anchor.style.transform = `translate(calc(-50% + ${s.offset.x}px), calc(-50% + ${s.offset.y}px))`;
+  } else if (!s.rafId) {
+    // Already visible and target changed — smoothly slide to new position.
+    s.lastTime = performance.now();
+    s.rafId = requestAnimationFrame(() => animateDelta(id));
+  }
+  // If rafId is already running it will pick up the updated s.offset automatically.
 
   anchor.style.transition = 'none';
   anchor.style.opacity = '1';
-  anchor.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
   anchor.textContent = v > 0 ? '+' + v : '' + v;
   anchor.classList.toggle('delta-pos', v > 0);
   anchor.classList.toggle('delta-neg', v < 0);
 
-  s.timer = setTimeout(() => { anchor.style.transition = 'opacity 0.4s ease'; anchor.style.opacity = '0'; s.value = 0; }, 2000);
+  s.timer = setTimeout(() => {
+    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
+    anchor.style.transition = 'opacity 0.4s ease';
+    anchor.style.opacity = '0';
+    s.value = 0;
+  }, 2000);
 }
 
 // ── Hold-to-repeat (per-pointer so multiple touches work independently) ──
