@@ -337,6 +337,8 @@ body::after {
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 156px;
+  height: 156px;
   z-index: 20;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -344,8 +346,6 @@ body::after {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-              height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .sp-ring {
@@ -358,7 +358,6 @@ body::after {
   box-shadow: 0 0 10px var(--accent),
               0 0 24px color-mix(in srgb, var(--accent) 25%, transparent),
               inset 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent);
-  transition: box-shadow 0.3s;
 }
 
 .sp-content {
@@ -367,33 +366,31 @@ body::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   pointer-events: none;
 }
 
 /* Idle */
 .sp-idle {
-  width: 78px;
-  height: 78px;
   transform: translate(-50%, -50%);
   animation: spFloat 2.8s ease-in-out infinite;
 }
 
 @keyframes spFloat {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50%       { transform: translate(-50%, -50%) scale(1.07); }
+  50%       { transform: translate(-50%, -50%) scale(1.05); }
 }
 
 .sp-icon {
-  font-size: 1.5rem;
+  font-size: 2.2rem;
   line-height: 1;
   color: var(--accent);
-  text-shadow: 0 0 8px var(--accent);
+  text-shadow: 0 0 10px var(--accent);
 }
 
 .sp-label {
   font-family: 'Cinzel', serif;
-  font-size: 0.42rem;
+  font-size: 0.52rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text);
@@ -403,89 +400,69 @@ body::after {
 
 /* Spinning */
 .sp-spinning {
-  width: 126px;
-  height: 126px;
   transform: translate(-50%, -50%);
 }
 
 .sp-spinning .sp-ring {
-  box-shadow: 0 0 18px var(--accent),
-              0 0 40px color-mix(in srgb, var(--accent) 40%, transparent),
-              inset 0 0 16px color-mix(in srgb, var(--accent) 20%, transparent);
   animation: spPulseRing 0.3s ease-in-out infinite alternate;
 }
 
 @keyframes spPulseRing {
   from { box-shadow: 0 0 14px var(--accent), 0 0 30px color-mix(in srgb, var(--accent) 35%, transparent); }
-  to   { box-shadow: 0 0 22px var(--accent), 0 0 50px color-mix(in srgb, var(--accent) 55%, transparent); }
+  to   { box-shadow: 0 0 26px var(--accent), 0 0 55px color-mix(in srgb, var(--accent) 55%, transparent); }
 }
 
-.sp-cycling {
-  font-family: 'Cinzel', serif;
-  font-size: 1.05rem;
-  color: var(--accent);
-  text-shadow: 0 0 8px var(--accent);
-  text-align: center;
-  white-space: nowrap;
-  display: block;
-}
-
-/* Settled */
+/* Settled — burst ring then hidden by JS */
 .sp-settled {
-  width: 168px;
-  height: 168px;
   transform: translate(-50%, -50%);
 }
 
 .sp-settled .sp-ring {
-  box-shadow: 0 0 28px var(--accent),
-              0 0 60px color-mix(in srgb, var(--accent) 50%, transparent),
-              0 0 100px color-mix(in srgb, var(--accent) 22%, transparent),
+  box-shadow: 0 0 30px var(--accent),
+              0 0 70px color-mix(in srgb, var(--accent) 50%, transparent),
               inset 0 0 28px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .sp-settled::after {
   content: '';
   position: absolute;
-  inset: -12px;
+  inset: -10px;
   border-radius: 50%;
   border: 1.5px solid var(--accent);
   opacity: 0;
-  animation: spBurst 0.7s ease-out forwards;
+  animation: spBurst 0.75s ease-out forwards;
   pointer-events: none;
 }
 
 @keyframes spBurst {
-  0%   { transform: scale(0.6); opacity: 0.9; }
-  100% { transform: scale(1.6); opacity: 0; }
+  0%   { transform: scale(0.7); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 
-.sp-winner {
-  font-family: 'Cinzel', serif;
-  font-size: 1.25rem;
-  color: var(--accent);
-  text-shadow: 0 0 10px var(--accent), 0 0 22px var(--accent);
-  text-align: center;
-  white-space: nowrap;
-  display: block;
-  animation: spReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+/* Card highlights during spin / after settle */
+.player-card.sp-highlight .score {
+  animation: spScorePulse 0.12s ease-in-out infinite alternate;
 }
 
-.sp-starts-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.6rem;
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-  color: var(--text);
-  opacity: 0.8;
-  display: block;
-  text-align: center;
-  animation: spReveal 0.45s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+@keyframes spScorePulse {
+  from { text-shadow: none; }
+  to   { text-shadow: 0 0 18px var(--accent), 0 0 36px var(--accent); }
 }
 
-@keyframes spReveal {
-  from { opacity: 0; transform: scale(0.4); }
-  to   { opacity: 1; transform: scale(1); }
+.player-card.sp-highlight-win .score {
+  text-shadow: 0 0 20px var(--accent), 0 0 45px var(--accent);
+  animation: spWinGlow 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes spWinGlow {
+  from { text-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent); }
+  to   { text-shadow: 0 0 28px var(--accent), 0 0 56px var(--accent), 0 0 88px var(--accent); }
+}
+
+.player-card.sp-highlight-win {
+  border-color: var(--accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent),
+              inset 0 0 18px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 /* Slot holds flex space; card is positioned absolutely inside */
@@ -768,3 +745,24 @@ body::after {
 }
 
 #fullscreen-btn:hover { border-color: var(--accent, #7050c8); color: var(--accent, #7050c8); }
+
+#randomize-btn {
+  display: none;
+  position: fixed;
+  top: 14px;
+  right: 66px;
+  z-index: 500;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2px;
+  color: var(--accent, #9070e8);
+  padding: 14px 16px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  text-shadow: 0 0 6px var(--accent, #9070e8);
+}
+
+#randomize-btn:hover { border-color: var(--accent, #7050c8); color: var(--accent, #7050c8); }

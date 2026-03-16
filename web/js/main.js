@@ -404,7 +404,17 @@ function vibrate(pattern) {
 
 // ── Start picker (first player randomizer) ──
 
+function spHighlightCard(id, cls) {
+  document.querySelectorAll('.player-card.sp-highlight, .player-card.sp-highlight-win')
+    .forEach(c => c.classList.remove('sp-highlight', 'sp-highlight-win'));
+  if (id == null) return;
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (card) card.classList.add(cls);
+}
+
 function showStartPicker() {
+  spHighlightCard(null);
   removeStartPicker();
   const picker = document.createElement('div');
   picker.id = 'start-picker';
@@ -417,11 +427,18 @@ function showStartPicker() {
     </div>`;
   picker.addEventListener('pointerdown', onStartPickerClick);
   document.getElementById('players').appendChild(picker);
+  document.getElementById('randomize-btn').style.display = 'none';
 }
 
 function removeStartPicker() {
   const el = document.getElementById('start-picker');
   if (el) el.remove();
+  spHighlightCard(null);
+  document.getElementById('randomize-btn').style.display = 'none';
+}
+
+function reopenStartPicker() {
+  showStartPicker();
 }
 
 function onStartPickerClick() {
@@ -429,39 +446,31 @@ function onStartPickerClick() {
   if (!picker || picker.classList.contains('sp-spinning')) return;
   vibrate(30);
 
-  const winner = players[Math.floor(Math.random() * players.length)];
-  const content = picker.querySelector('.sp-content');
+  const winnerIdx = Math.floor(Math.random() * players.length);
+  const winnerId = players[winnerIdx].id;
 
   picker.className = 'start-picker sp-spinning';
-  content.innerHTML = `<span class="sp-cycling">${players[0].name}</span>`;
 
-  // Deceleration schedule: fast → slow over ~1.4s
   const delays = [45, 45, 45, 55, 55, 70, 90, 115, 150, 200, 265, 340, 430];
-  let i = 0;
-  let idx = 0;
+  let i = 0, idx = 0;
+
+  spHighlightCard(players[0].id, 'sp-highlight');
 
   function tick() {
     if (i >= delays.length) {
-      // Settle
+      // Settle: light up winner, burst the picker, then hide it
+      spHighlightCard(winnerId, 'sp-highlight-win');
       picker.className = 'start-picker sp-settled';
-      content.innerHTML = `
-        <span class="sp-winner">${winner.name}</span>
-        <span class="sp-starts-label">STARTS!</span>`;
       vibrate([30, 60, 80]);
-      // After 4s revert to idle "AGAIN?"
       setTimeout(() => {
-        if (!document.getElementById('start-picker')) return;
-        picker.className = 'start-picker sp-idle';
-        content.innerHTML = `
-          <span class="sp-icon">✦</span>
-          <span class="sp-label">AGAIN?</span>`;
-      }, 4000);
+        const p = document.getElementById('start-picker');
+        if (p) p.remove();
+        document.getElementById('randomize-btn').style.display = 'block';
+      }, 800);
       return;
     }
-    // Avoid landing on winner mid-cycle
-    do { idx = (idx + 1) % players.length; } while (i === delays.length - 1 && players[idx] === winner);
-    const el = content.querySelector('.sp-cycling');
-    if (el) el.textContent = players[idx].name;
+    idx = (idx + 1) % players.length;
+    spHighlightCard(players[idx].id, 'sp-highlight');
     setTimeout(tick, delays[i++]);
   }
   tick();
@@ -472,6 +481,7 @@ function onStartPickerClick() {
 Object.assign(window, {
   startGame, backToSelect, selectPreset, stepPlayers, toggleFullscreen,
   startHold, stopHold, openSettings, closeAllSettings, rotateFromOverlay, setPlayerColor,
+  reopenStartPicker,
 });
 
 // ── Init ──
