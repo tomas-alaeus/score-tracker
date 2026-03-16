@@ -407,10 +407,23 @@ function vibrate(pattern) {
 function spHighlightCard(id, cls) {
   document.querySelectorAll('.player-card.sp-highlight, .player-card.sp-highlight-win')
     .forEach(c => c.classList.remove('sp-highlight', 'sp-highlight-win'));
+  document.querySelectorAll('.sp-star').forEach(s => s.remove());
   if (id == null) return;
   const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
   const card = slot ? slot.querySelector('.player-card') : null;
-  if (card) card.classList.add(cls);
+  if (!card) return;
+  card.classList.add(cls);
+  if (cls === 'sp-highlight-win') {
+    const star = document.createElement('span');
+    star.className = 'sp-star';
+    star.textContent = '★';
+    const scoreWrap = card.querySelector('.score-wrap');
+    if (scoreWrap) scoreWrap.insertBefore(star, scoreWrap.firstChild);
+    setTimeout(() => {
+      star.classList.add('sp-star-out');
+      setTimeout(() => star.remove(), 700);
+    }, 5000);
+  }
 }
 
 function showStartPicker() {
