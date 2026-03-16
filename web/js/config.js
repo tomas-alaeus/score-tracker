@@ -8,6 +8,7 @@ export const PLAYER_COLOR_VALUES = {
 export const GAMES = {
   hr: {
     name: 'Hero Realms',
+    randomizeStart: true,
     emoji: '⚔️',
     desc: 'Life tracker — survive longer than your opponents',
     direction: 'down',
@@ -36,6 +37,7 @@ export const GAMES = {
   },
   azul: {
     name: 'Azul',
+    randomizeStart: true,
     emoji: '🔷',
     desc: 'VP counter — score rises as you tile your palace',
     direction: 'up',
