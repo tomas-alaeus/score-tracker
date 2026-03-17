@@ -435,8 +435,7 @@ function showStartPicker() {
   picker.innerHTML = `
     <div class="sp-ring"></div>
     <div class="sp-content">
-      <span class="sp-icon">✦</span>
-      <span class="sp-label">WHO STARTS?</span>
+      <span class="sp-icon">?</span>
     </div>`;
   picker.addEventListener('pointerdown', onStartPickerClick);
   document.getElementById('players').appendChild(picker);

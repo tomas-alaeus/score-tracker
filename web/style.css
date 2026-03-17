@@ -382,10 +382,11 @@ body::after {
 }
 
 .sp-icon {
-  font-size: 2.2rem;
+  font-size: 5.5rem;
   line-height: 1;
+  font-family: 'Cinzel', serif;
   color: var(--accent);
-  text-shadow: 0 0 10px var(--accent);
+  text-shadow: 0 0 14px var(--accent);
 }
 
 .sp-label {
@@ -457,6 +458,7 @@ body::after {
   opacity: 0.28;
   pointer-events: none;
   z-index: 0;
+  transform-origin: 50% 50%;
   animation: spStarIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -464,14 +466,16 @@ body::after {
   animation: spStarOut 0.7s ease-in forwards !important;
 }
 
+/* translateY(-6%) shifts the glyph up to align visually with the score number.
+   The offset is present in every keyframe so the pivot stays at the card centre. */
 @keyframes spStarIn {
-  from { opacity: 0; transform: scale(0.2) rotate(-25deg); }
-  to   { opacity: 0.28; transform: scale(1) rotate(0deg); }
+  from { opacity: 0; transform: translateY(-6%) scale(0.2) rotate(-25deg); }
+  to   { opacity: 0.28; transform: translateY(-6%) scale(1) rotate(0deg); }
 }
 
 @keyframes spStarOut {
-  from { opacity: 0.28; transform: scale(1) rotate(0deg); }
-  to   { opacity: 0; transform: scale(1.25) rotate(15deg); }
+  from { opacity: 0.28; transform: translateY(-6%) scale(1) rotate(0deg); }
+  to   { opacity: 0; transform: translateY(-6%) scale(1.25) rotate(15deg); }
 }
 
 /* Slot holds flex space; card is positioned absolutely inside */
