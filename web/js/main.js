@@ -335,6 +335,7 @@ function showDelta(id, delta) {
   }
   // If rafId is already running it will pick up the updated s.offset automatically.
 
+  card.classList.add('delta-active');
   anchor.style.transition = 'none';
   anchor.style.opacity = '1';
   anchor.textContent = v > 0 ? '+' + v : '' + v;
@@ -345,6 +346,7 @@ function showDelta(id, delta) {
     if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
     anchor.style.transition = 'opacity 0.4s ease';
     anchor.style.opacity = '0';
+    card.classList.remove('delta-active');
     s.value = 0;
   }, 2000);
 }

@@ -492,7 +492,6 @@ body::after {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 11;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -515,6 +514,7 @@ body::after {
 
 .player-card.leading::before { background: var(--accent); }
 .player-card.eliminated { opacity: 0.42; }
+.player-card.delta-active { z-index: 15; }
 
 .elim-badge {
   display: none;
