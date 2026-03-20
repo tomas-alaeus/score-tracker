@@ -292,7 +292,7 @@ body::after {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(90deg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -309,7 +309,7 @@ body::after {
   font-size: 0.55rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text, #ccc0ff);
+  color: #fff;
   opacity: 0.6;
   font-family: var(--game-font, sans-serif);
 }
@@ -317,16 +317,15 @@ body::after {
 .vp-pool-count {
   font-size: 1.6rem;
   font-family: var(--game-font, sans-serif);
-  color: var(--accent, #8858e0);
+  color: #fff;
   line-height: 1;
 }
 
 .vp-pool-total {
   font-size: 1.3rem;
-  color: #ffffff;
+  color: #fff;
   opacity: 0.5;
   font-family: var(--game-font, sans-serif);
-  transform: rotate(-90deg);
 }
 
 .vp-pool.depleted .vp-pool-count { color: #ff6040; }
