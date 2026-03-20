@@ -147,7 +147,6 @@ export function render(players, currentGame) {
             <div class="arrow-icon arrow-down"></div>
           </div>
           <div class="score-wrap">
-            <span class="delta-anchor"></span>
             <span class="score">${p.score}</span>
           </div>
           ${colorIndicator}

@@ -274,13 +274,47 @@ function smoothDamp(current, target, velocity, smoothTime, dt) {
   return { value: out, velocity: newVel };
 }
 
+function getDeltaEl(id) {
+  const elId = 'delta-' + id;
+  let el = document.getElementById(elId);
+  if (!el) {
+    el = document.createElement('span');
+    el.id = elId;
+    el.className = 'delta-anchor';
+    el.style.opacity = '0';
+    document.getElementById('delta-layer').appendChild(el);
+  }
+  return el;
+}
+
+function getCardScreenInfo(id) {
+  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
+  const card = slot ? slot.querySelector('.player-card') : null;
+  if (!card) return null;
+  const rect = card.getBoundingClientRect();
+  return {
+    cx: rect.left + rect.width / 2,
+    cy: rect.top + rect.height / 2,
+    R: (parseFloat(card.dataset.rotation) || 0) * Math.PI / 180,
+  };
+}
+
+function localToScreen(lx, ly, R) {
+  return { sx: lx * Math.cos(R) - ly * Math.sin(R), sy: lx * Math.sin(R) + ly * Math.cos(R) };
+}
+
+function placeDeltaEl(el, cx, cy, lx, ly, R) {
+  const { sx, sy } = localToScreen(lx, ly, R);
+  el.style.left = (cx + sx) + 'px';
+  el.style.top  = (cy + sy) + 'px';
+}
+
 function animateDelta(id) {
   const s = deltaState[id];
   if (!s) return;
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
-  const anchor = card ? card.querySelector('.delta-anchor') : null;
-  if (!anchor) { s.rafId = null; return; }
+  const info = getCardScreenInfo(id);
+  const el = getDeltaEl(id);
+  if (!info) { s.rafId = null; return; }
 
   const now = performance.now();
   const dt = Math.min((now - s.lastTime) / 1000, 0.05);
@@ -291,13 +325,13 @@ function animateDelta(id) {
   s.cur.x = rx.value; s.vel.x = rx.velocity;
   s.cur.y = ry.value; s.vel.y = ry.velocity;
 
-  anchor.style.transform = `translate(calc(-50% + ${s.cur.x}px), calc(-50% + ${s.cur.y}px))`;
+  placeDeltaEl(el, info.cx, info.cy, s.cur.x, s.cur.y, info.R);
 
   if (Math.abs(s.offset.x - s.cur.x) > 0.5 || Math.abs(s.offset.y - s.cur.y) > 0.5) {
     s.rafId = requestAnimationFrame(() => animateDelta(id));
   } else {
     s.cur.x = s.offset.x; s.cur.y = s.offset.y;
-    anchor.style.transform = `translate(calc(-50% + ${s.offset.x}px), calc(-50% + ${s.offset.y}px))`;
+    placeDeltaEl(el, info.cx, info.cy, s.offset.x, s.offset.y, info.R);
     s.rafId = null;
   }
 }
@@ -308,45 +342,40 @@ function showDelta(id, delta) {
   s.value += delta;
   clearTimeout(s.timer);
 
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
-  if (!card) return;
-
-  const anchor = card.querySelector('.delta-anchor');
-  if (!anchor) return;
+  const el = getDeltaEl(id);
   const v = s.value;
 
   if (v === 0) {
     if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    anchor.style.transition = 'none'; anchor.style.opacity = '0'; s.value = 0; return;
+    el.style.transition = 'none'; el.style.opacity = '0'; s.value = 0; return;
   }
 
-  const wasVisible = parseFloat(anchor.style.opacity || '0') > 0;
+  const info = getCardScreenInfo(id);
+  if (!info) return;
+
+  const wasVisible = parseFloat(el.style.opacity || '0') > 0;
   if (!wasVisible) {
     // First appearance — snap to position immediately.
     s.cur.x = s.offset.x; s.cur.y = s.offset.y;
     s.vel.x = 0; s.vel.y = 0;
     if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    anchor.style.transform = `translate(calc(-50% + ${s.offset.x}px), calc(-50% + ${s.offset.y}px))`;
+    placeDeltaEl(el, info.cx, info.cy, s.offset.x, s.offset.y, info.R);
   } else if (!s.rafId) {
     // Already visible and target changed — smoothly slide to new position.
     s.lastTime = performance.now();
     s.rafId = requestAnimationFrame(() => animateDelta(id));
   }
-  // If rafId is already running it will pick up the updated s.offset automatically.
 
-  card.classList.add('delta-active');
-  anchor.style.transition = 'none';
-  anchor.style.opacity = '1';
-  anchor.textContent = v > 0 ? '+' + v : '' + v;
-  anchor.classList.toggle('delta-pos', v > 0);
-  anchor.classList.toggle('delta-neg', v < 0);
+  el.style.transition = 'none';
+  el.style.opacity = '1';
+  el.textContent = v > 0 ? '+' + v : '' + v;
+  el.classList.toggle('delta-pos', v > 0);
+  el.classList.toggle('delta-neg', v < 0);
 
   s.timer = setTimeout(() => {
     if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    anchor.style.transition = 'opacity 0.4s ease';
-    anchor.style.opacity = '0';
-    card.classList.remove('delta-active');
+    el.style.transition = 'opacity 0.4s ease';
+    el.style.opacity = '0';
     s.value = 0;
   }, 2000);
 }
