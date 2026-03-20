@@ -162,7 +162,6 @@ export function render(players, currentGame) {
       <div id="vp-pool" class="vp-pool">
         <div class="vp-pool-label">VP Pool</div>
         <div class="vp-pool-count">—</div>
-        <div class="vp-pool-total">/ ${total}</div>
       </div>`);
   } else {
     playersEl.classList.remove('has-vp-pool');
