@@ -322,10 +322,11 @@ body::after {
 }
 
 .vp-pool-total {
-  font-size: 0.65rem;
-  color: var(--text, #ccc0ff);
+  font-size: 1.3rem;
+  color: #ffffff;
   opacity: 0.5;
   font-family: var(--game-font, sans-serif);
+  transform: rotate(-90deg);
 }
 
 .vp-pool.depleted .vp-pool-count { color: #ff6040; }
