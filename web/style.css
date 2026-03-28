@@ -399,13 +399,19 @@ body::after {
   white-space: nowrap;
 }
 
-/* Spinning */
-.sp-spinning {
-  transform: translate(-50%, -50%);
+/* Held — shrinks while pressed */
+.sp-held {
+  transform: translate(-50%, -50%) scale(0.5);
+  transition: transform 0.12s ease-out;
 }
 
-.sp-spinning .sp-ring {
-  animation: spPulseRing 0.3s ease-in-out infinite alternate;
+/* Bouncing — position and transform controlled by JS */
+.sp-bouncing {
+  transition: none;
+}
+
+.sp-bouncing .sp-ring {
+  animation: spPulseRing 0.2s ease-in-out infinite alternate;
 }
 
 @keyframes spPulseRing {

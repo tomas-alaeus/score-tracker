@@ -13,6 +13,7 @@ let selectedPlayerCount = GAMES[selectedGameId].defaultPlayers;
 
 const holds = new Map(); // pointerId → { timeout, el }
 const deltaState = {};
+let spBounceState = null;
 
 // ── Wake lock ──
 
@@ -469,12 +470,16 @@ function showStartPicker() {
     <div class="sp-content">
       <span class="sp-icon">?</span>
     </div>`;
-  picker.addEventListener('pointerdown', onStartPickerClick);
+  picker.addEventListener('pointerdown', onSpPickerDown);
   document.getElementById('players').appendChild(picker);
   document.getElementById('randomize-btn').style.display = 'none';
 }
 
 function removeStartPicker() {
+  if (spBounceState) {
+    if (spBounceState.rafId) cancelAnimationFrame(spBounceState.rafId);
+    spBounceState = null;
+  }
   const el = document.getElementById('start-picker');
   if (el) el.remove();
   spHighlightCard(null);
@@ -485,39 +490,110 @@ function reopenStartPicker() {
   showStartPicker();
 }
 
-function onStartPickerClick() {
+function onSpPickerDown(e) {
   const picker = document.getElementById('start-picker');
-  if (!picker || picker.classList.contains('sp-spinning')) return;
-  vibrate(30);
+  if (!picker || spBounceState) return;
+  e.preventDefault();
+  picker.setPointerCapture(e.pointerId);
+  picker.className = 'start-picker sp-held';
+  vibrate(18);
 
-  const winnerIdx = Math.floor(Math.random() * players.length);
-  const winnerId = players[winnerIdx].id;
-
-  picker.className = 'start-picker sp-spinning';
-
-  const delays = [45, 45, 45, 55, 55, 70, 90, 115, 150, 200, 265, 340, 430];
-  let i = 0, idx = 0;
-
-  spHighlightCard(players[0].id, 'sp-highlight');
-
-  function tick() {
-    if (i >= delays.length) {
-      // Settle: light up winner, burst the picker, then hide it
-      spHighlightCard(winnerId, 'sp-highlight-win');
-      picker.className = 'start-picker sp-settled';
-      vibrate([30, 60, 80]);
-      setTimeout(() => {
-        const p = document.getElementById('start-picker');
-        if (p) p.remove();
-        document.getElementById('randomize-btn').style.display = 'block';
-      }, 800);
-      return;
-    }
-    idx = (idx + 1) % players.length;
-    spHighlightCard(players[idx].id, 'sp-highlight');
-    setTimeout(tick, delays[i++]);
+  function onUp() {
+    picker.removeEventListener('pointerup', onUp);
+    picker.removeEventListener('pointercancel', onUp);
+    startSpBounce();
   }
-  tick();
+  picker.addEventListener('pointerup', onUp);
+  picker.addEventListener('pointercancel', onUp);
+}
+
+function startSpBounce() {
+  const picker = document.getElementById('start-picker');
+  const container = document.getElementById('players');
+  if (!picker || !container) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const pickerRect = picker.getBoundingClientRect();
+  const x = pickerRect.left + pickerRect.width / 2 - containerRect.left;
+  const y = pickerRect.top + pickerRect.height / 2 - containerRect.top;
+
+  const speed = 700 + Math.random() * 300;
+  const angle = Math.random() * Math.PI * 2;
+
+  picker.style.left = x + 'px';
+  picker.style.top = y + 'px';
+  picker.style.transform = 'translate(-50%, -50%)';
+  picker.className = 'start-picker sp-bouncing';
+
+  spBounceState = { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, startTime: performance.now(), lastTime: performance.now(), rafId: null };
+  spBounceState.rafId = requestAnimationFrame(animateSpBounce);
+}
+
+function animateSpBounce(now) {
+  const state = spBounceState;
+  if (!state) return;
+  const picker = document.getElementById('start-picker');
+  const container = document.getElementById('players');
+  if (!picker || !container) { spBounceState = null; return; }
+
+  const dt = Math.min((now - state.lastTime) / 1000, 0.05);
+  state.lastTime = now;
+  const elapsed = (now - state.startTime) / 1000;
+
+  if (elapsed > 4) {
+    const decay = Math.pow(0.08, dt);
+    state.vx *= decay;
+    state.vy *= decay;
+  }
+
+  state.x += state.vx * dt;
+  state.y += state.vy * dt;
+
+  const r = 78;
+  const W = container.offsetWidth;
+  const H = container.offsetHeight;
+  if (state.x < r)     { state.x = r;     state.vx =  Math.abs(state.vx); vibrate(12); }
+  if (state.x > W - r) { state.x = W - r; state.vx = -Math.abs(state.vx); vibrate(12); }
+  if (state.y < r)     { state.y = r;     state.vy =  Math.abs(state.vy); vibrate(12); }
+  if (state.y > H - r) { state.y = H - r; state.vy = -Math.abs(state.vy); vibrate(12); }
+
+  picker.style.left = state.x + 'px';
+  picker.style.top  = state.y + 'px';
+
+  if (elapsed > 4 && Math.hypot(state.vx, state.vy) < 8) {
+    spSettleWinner(state.x, state.y);
+    return;
+  }
+  state.rafId = requestAnimationFrame(animateSpBounce);
+}
+
+function spSettleWinner(x, y) {
+  spBounceState = null;
+  const container = document.getElementById('players');
+  const containerRect = container ? container.getBoundingClientRect() : null;
+
+  let closest = null, minDist = Infinity;
+  for (const p of players) {
+    const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
+    if (!slot) continue;
+    const slotRect = slot.getBoundingClientRect();
+    const cx = slotRect.left + slotRect.width / 2 - (containerRect ? containerRect.left : 0);
+    const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
+    const d = Math.hypot(x - cx, y - cy);
+    if (d < minDist) { minDist = d; closest = p; }
+  }
+
+  if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate([30, 60, 80]); }
+
+  const picker = document.getElementById('start-picker');
+  if (picker) {
+    picker.className = 'start-picker sp-settled';
+    setTimeout(() => {
+      const p = document.getElementById('start-picker');
+      if (p) p.remove();
+      document.getElementById('randomize-btn').style.display = 'block';
+    }, 800);
+  }
 }
 
 // ── Expose to inline HTML event handlers ──
