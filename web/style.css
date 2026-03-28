@@ -337,6 +337,7 @@ body::after {
   position: absolute;
   top: 50%;
   left: 50%;
+  transform: translate(-50%, -50%);
   width: 156px;
   height: 156px;
   z-index: 20;
@@ -372,7 +373,6 @@ body::after {
 
 /* Idle */
 .sp-idle {
-  transform: translate(-50%, -50%);
   animation: spFloat 2.8s ease-in-out infinite;
 }
 

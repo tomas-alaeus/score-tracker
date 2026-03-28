@@ -509,7 +509,7 @@ function startSpBounce() {
   const x = pickerRect.left + pickerRect.width / 2 - containerRect.left;
   const y = pickerRect.top + pickerRect.height / 2 - containerRect.top;
 
-  const speed = 700 + Math.random() * 300;
+  const speed = 490 + Math.random() * 210;
   const angle = Math.random() * Math.PI * 2;
 
   picker.style.left = x + 'px';
@@ -550,11 +550,12 @@ function animateSpBounce(now) {
   if (state.y < r)     { state.y = r;     state.vy =  Math.abs(state.vy); bounced = true; }
   if (state.y > H - r) { state.y = H - r; state.vy = -Math.abs(state.vy); bounced = true; }
   if (bounced) {
-    const jitter = (Math.random() * 2 - 1) * 10 * Math.PI / 180;
+    const jitter = (Math.random() * 2 - 1) * 25 * Math.PI / 180;
     const cos = Math.cos(jitter), sin = Math.sin(jitter);
     const nvx = state.vx * cos - state.vy * sin;
     const nvy = state.vx * sin + state.vy * cos;
-    state.vx = nvx; state.vy = nvy;
+    const speedMod = 0.9 + Math.random() * 0.2;
+    state.vx = nvx * speedMod; state.vy = nvy * speedMod;
     vibrate(12);
   }
 
