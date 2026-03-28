@@ -307,6 +307,7 @@ function placeDeltaEl(el, cx, cy, lx, ly, R) {
   const { sx, sy } = localToScreen(lx, ly, R);
   el.style.left = (cx + sx) + 'px';
   el.style.top  = (cy + sy) + 'px';
+  el.style.transform = `translate(-50%, -50%) rotate(${R}rad)`;
 }
 
 function animateDelta(id) {
