@@ -494,17 +494,9 @@ function onSpPickerDown(e) {
   const picker = document.getElementById('start-picker');
   if (!picker || spBounceState) return;
   e.preventDefault();
-  picker.setPointerCapture(e.pointerId);
-  picker.className = 'start-picker sp-held';
+  picker.className = 'start-picker sp-flash';
   vibrate(18);
-
-  function onUp() {
-    picker.removeEventListener('pointerup', onUp);
-    picker.removeEventListener('pointercancel', onUp);
-    startSpBounce();
-  }
-  picker.addEventListener('pointerup', onUp);
-  picker.addEventListener('pointercancel', onUp);
+  setTimeout(startSpBounce, 1000);
 }
 
 function startSpBounce() {
@@ -522,7 +514,7 @@ function startSpBounce() {
 
   picker.style.left = x + 'px';
   picker.style.top = y + 'px';
-  picker.style.transform = 'translate(-50%, -50%) scale(0.5)';
+  picker.style.transform = 'translate(-50%, -50%)';
   picker.className = 'start-picker sp-bouncing';
 
   spBounceState = { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, startTime: performance.now(), lastTime: performance.now(), rafId: null };

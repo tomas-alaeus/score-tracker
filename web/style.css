@@ -399,11 +399,14 @@ body::after {
   white-space: nowrap;
 }
 
-/* Held — shrinks while pressed */
-.sp-held {
-  animation: none;
-  transform: translate(-50%, -50%) scale(0.5);
-  transition: transform 0.18s ease-out;
+/* Flash — quick glow burst before launching */
+.sp-flash .sp-ring {
+  animation: spFlashRing 0.2s ease-in-out infinite;
+}
+
+@keyframes spFlashRing {
+  0%, 100% { box-shadow: 0 0 10px var(--accent), 0 0 24px color-mix(in srgb, var(--accent) 25%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent); }
+  50%       { box-shadow: 0 0 38px var(--accent), 0 0 80px color-mix(in srgb, var(--accent) 65%, transparent), inset 0 0 30px color-mix(in srgb, var(--accent) 25%, transparent); }
 }
 
 /* Bouncing — position and transform controlled by JS */
