@@ -401,8 +401,9 @@ body::after {
 
 /* Held — shrinks while pressed */
 .sp-held {
+  animation: none;
   transform: translate(-50%, -50%) scale(0.5);
-  transition: transform 0.12s ease-out;
+  transition: transform 0.18s ease-out;
 }
 
 /* Bouncing — position and transform controlled by JS */
