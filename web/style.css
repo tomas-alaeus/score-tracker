@@ -674,14 +674,21 @@ body::after {
 }
 
 /* ── Tap zones ── */
+/* Spacer pushes btn-row to bottom half; score-wrap overlays the whole card */
+.score-spacer { flex: 1; }
+
+.btn-row {
+  display: flex;
+  flex: 1;
+}
+
 .tap-zone {
   flex: 1;
-  min-height: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-end;
+  flex-direction: column;
+  padding-bottom: 8%;
   cursor: pointer;
   touch-action: none;
   transition: background 0.08s;
@@ -689,28 +696,22 @@ body::after {
 
 .tap-zone.pressing { background: rgba(255,255,255,0.05); }
 .tap-zone.disabled { pointer-events: none; }
-.tap-add { padding-bottom: 36px; }
-.tap-sub { padding-top: 36px; }
 
-/* CSS chevron arrows */
-.arrow-icon {
-  width: 4vmin;
-  height: 4vmin;
-  border-right: 2px solid var(--text);
-  border-top: 2px solid var(--text);
-  opacity: 0.15;
+.btn-sign {
+  font-family: system-ui, sans-serif;
+  font-size: 14vmin;
+  line-height: 1;
+  color: var(--text);
+  opacity: 0.28;
   pointer-events: none;
   transition: opacity 0.15s;
-  flex-shrink: 0;
+  user-select: none;
 }
 
-.tap-zone.pressing .arrow-icon { opacity: 0.4; }
-.tap-zone.disabled .arrow-icon { opacity: 0.04; }
+.tap-zone.pressing .btn-sign { opacity: 0.55; }
+.tap-zone.disabled .btn-sign { opacity: 0.05; }
 
-.arrow-up   { transform: rotate(-45deg); }
-.arrow-down { transform: rotate(135deg); }
-
-/* Score overlay — floats over the tap zones */
+/* Score overlay — covers entire card, centered, pointer-events: none */
 .score-wrap {
   position: absolute;
   inset: 0;
@@ -721,22 +722,19 @@ body::after {
   z-index: 1;
 }
 
-#delta-layer {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 20;
-}
-
-.delta-anchor {
+/* Delta number — absolutely positioned near top edge of card */
+.score-delta {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: 'DM Mono', monospace;
   font-size: 2.8rem;
   pointer-events: none;
   opacity: 0;
-  position: absolute;
-  text-align: center;
   white-space: nowrap;
   text-shadow: 0 0 2px #000, 0 0 4px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  transition: opacity 0.4s ease;
 }
 
 .delta-pos { color: #40e880; }

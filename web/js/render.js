@@ -137,18 +137,22 @@ export function render(players, currentGame) {
             ${colorSwatches}
           </div>
           <button class="settings-btn" onclick="openSettings(${p.id})">···</button>
-          <div class="tap-zone tap-add"
-            onpointerdown="startHold(event,${p.id},1,this)"
-            onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
-            <div class="arrow-icon arrow-up"></div>
-          </div>
-          <div class="tap-zone tap-sub${eliminated ? ' disabled' : ''}"
-            onpointerdown="if(!this.classList.contains('disabled'))startHold(event,${p.id},-1,this)"
-            onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
-            <div class="arrow-icon arrow-down"></div>
-          </div>
+          <div class="score-spacer"></div>
           <div class="score-wrap">
+            <span class="score-delta" id="delta-${p.id}"></span>
             <span class="score">${p.score}</span>
+          </div>
+          <div class="btn-row">
+            <div class="tap-zone tap-sub${eliminated ? ' disabled' : ''}"
+              onpointerdown="if(!this.classList.contains('disabled'))startHold(event,${p.id},-1,this)"
+              onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
+              <span class="btn-sign">−</span>
+            </div>
+            <div class="tap-zone tap-add"
+              onpointerdown="startHold(event,${p.id},1,this)"
+              onpointerup="stopHold(event.pointerId)" onpointerleave="stopHold(event.pointerId)" onpointercancel="stopHold(event.pointerId)">
+              <span class="btn-sign">+</span>
+            </div>
           </div>
           ${colorIndicator}
         </div>

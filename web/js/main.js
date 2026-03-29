@@ -7,12 +7,7 @@ import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard, rotateVelocit
 // ── Constants ──
 
 const DELTA = {
-  EDGE_SCALE:     0.65,   // how far toward card edge (fraction of edge distance)
-  FALLBACK_Y:     0.38,   // Y offset as fraction of card height when touch is near centre
-  SMOOTH_TIME:    0.18,   // SmoothDamp smooth time in seconds
-  SNAP_THRESHOLD: 0.5,    // stop animating when within this many px of target
-  VISIBLE_MS:     2000,   // how long the delta number stays on screen
-  FADE:           '0.4s', // CSS fade-out duration
+  VISIBLE_MS: 2000,   // how long the delta number stays on screen
 };
 
 const HOLD = {
@@ -59,7 +54,7 @@ let selectedGameId = Object.keys(GAMES)[0];
 let selectedPlayerCount = GAMES[selectedGameId].defaultPlayers;
 
 const holds = new Map(); // pointerId → { timeout, el }
-const deltaState = {};
+const deltaTimers = {}; // id → { value, timer }
 let spBounceState = null;
 
 // ── Wake lock ──
@@ -266,139 +261,26 @@ function changeScore(id, delta) {
 
 // ── Delta display ──
 
-function getFarSideOffset(event, card) {
-  const rect = card.getBoundingClientRect();
-  const cardW = card.offsetWidth;
-  const cardH = card.offsetHeight;
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const dx = event.clientX - cx;
-  const dy = event.clientY - cy;
-
-  // Rotate far-side direction from screen space into card local space.
-  // CSS rotate(R) maps local→screen as: sx = lx·cos(R) - ly·sin(R), sy = lx·sin(R) + ly·cos(R)
-  // Inverse: lx = sx·cos(R) + sy·sin(R), ly = -sx·sin(R) + sy·cos(R)
-  const R = (parseFloat(card.dataset.rotation) || 0) * Math.PI / 180;
-  const fdx = -dx, fdy = -dy;
-  const localX = fdx * Math.cos(R) + fdy * Math.sin(R);
-  const localY = -fdx * Math.sin(R) + fdy * Math.cos(R);
-
-  const mag = Math.sqrt(localX * localX + localY * localY);
-  if (mag < 1) return { x: 0, y: -(cardH * DELTA.FALLBACK_Y) };
-
-  const nx = localX / mag, ny = localY / mag;
-
-  // Scale to 75% of the way to the card edge in the local direction.
-  const hw = cardW / 2, hh = cardH / 2;
-  const tx = Math.abs(nx) > 0.001 ? hw / Math.abs(nx) : Infinity;
-  const ty = Math.abs(ny) > 0.001 ? hh / Math.abs(ny) : Infinity;
-  const t = Math.min(tx, ty) * DELTA.EDGE_SCALE;
-
-  return { x: nx * t, y: ny * t };
-}
-
-
-function getDeltaEl(id) {
-  const elId = 'delta-' + id;
-  let el = document.getElementById(elId);
-  if (!el) {
-    el = document.createElement('span');
-    el.id = elId;
-    el.className = 'delta-anchor';
-    el.style.opacity = '0';
-    document.getElementById('delta-layer').appendChild(el);
-  }
-  return el;
-}
-
-function getCardScreenInfo(id) {
-  const card = getCard(id);
-  if (!card) return null;
-  const rect = card.getBoundingClientRect();
-  return {
-    cx: rect.left + rect.width / 2,
-    cy: rect.top + rect.height / 2,
-    R: (parseFloat(card.dataset.rotation) || 0) * Math.PI / 180,
-  };
-}
-
-function localToScreen(lx, ly, R) {
-  return { sx: lx * Math.cos(R) - ly * Math.sin(R), sy: lx * Math.sin(R) + ly * Math.cos(R) };
-}
-
-function placeDeltaEl(el, cx, cy, lx, ly, R) {
-  const { sx, sy } = localToScreen(lx, ly, R);
-  el.style.left = (cx + sx) + 'px';
-  el.style.top  = (cy + sy) + 'px';
-  el.style.transform = `translate(-50%, -50%) rotate(${R}rad)`;
-}
-
-function animateDelta(id) {
-  const s = deltaState[id];
-  if (!s) return;
-  const info = getCardScreenInfo(id);
-  const el = getDeltaEl(id);
-  if (!info) { s.rafId = null; return; }
-
-  const now = performance.now();
-  const dt = Math.min((now - s.lastTime) / 1000, MAX_DT);
-  s.lastTime = now;
-
-  const rx = smoothDamp(s.cur.x, s.offset.x, s.vel.x, DELTA.SMOOTH_TIME, dt);
-  const ry = smoothDamp(s.cur.y, s.offset.y, s.vel.y, DELTA.SMOOTH_TIME, dt);
-  s.cur.x = rx.value; s.vel.x = rx.velocity;
-  s.cur.y = ry.value; s.vel.y = ry.velocity;
-
-  placeDeltaEl(el, info.cx, info.cy, s.cur.x, s.cur.y, info.R);
-
-  if (Math.abs(s.offset.x - s.cur.x) > DELTA.SNAP_THRESHOLD || Math.abs(s.offset.y - s.cur.y) > DELTA.SNAP_THRESHOLD) {
-    s.rafId = requestAnimationFrame(() => animateDelta(id));
-  } else {
-    s.cur.x = s.offset.x; s.cur.y = s.offset.y;
-    placeDeltaEl(el, info.cx, info.cy, s.offset.x, s.offset.y, info.R);
-    s.rafId = null;
-  }
-}
-
 function showDelta(id, delta) {
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset: { x: 0, y: 0 }, cur: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, rafId: null, lastTime: 0 };
-  const s = deltaState[id];
+  if (!deltaTimers[id]) deltaTimers[id] = { value: 0, timer: null };
+  const s = deltaTimers[id];
   s.value += delta;
   clearTimeout(s.timer);
 
-  const el = getDeltaEl(id);
+  const el = document.getElementById('delta-' + id);
+  if (!el) return;
   const v = s.value;
 
   if (v === 0) {
-    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    el.style.transition = 'none'; el.style.opacity = '0'; s.value = 0; return;
+    el.style.opacity = '0'; s.value = 0; return;
   }
 
-  const info = getCardScreenInfo(id);
-  if (!info) return;
-
-  const wasVisible = parseFloat(el.style.opacity || '0') > 0;
-  if (!wasVisible) {
-    // First appearance — snap to position immediately.
-    s.cur.x = s.offset.x; s.cur.y = s.offset.y;
-    s.vel.x = 0; s.vel.y = 0;
-    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    placeDeltaEl(el, info.cx, info.cy, s.offset.x, s.offset.y, info.R);
-  } else if (!s.rafId) {
-    // Already visible and target changed — smoothly slide to new position.
-    s.lastTime = performance.now();
-    s.rafId = requestAnimationFrame(() => animateDelta(id));
-  }
-
-  el.style.transition = 'none';
-  el.style.opacity = '1';
   el.textContent = v > 0 ? '+' + v : '' + v;
   el.classList.toggle('delta-pos', v > 0);
   el.classList.toggle('delta-neg', v < 0);
+  el.style.opacity = '1';
 
   s.timer = setTimeout(() => {
-    if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    el.style.transition = `opacity ${DELTA.FADE} ease`;
     el.style.opacity = '0';
     s.value = 0;
   }, DELTA.VISIBLE_MS);
@@ -410,10 +292,6 @@ function startHold(event, id, delta, el) {
   const pointerId = event.pointerId;
   stopHold(pointerId);
   if (el) el.classList.add('pressing');
-  const card = el.closest('.player-card');
-  const offset = getFarSideOffset(event, card);
-  if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset, cur: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, rafId: null, lastTime: 0 };
-  else deltaState[id].offset = offset;
   changeScore(id, delta);
   let interval = HOLD.START_INTERVAL_MS;
   const state = { el };
