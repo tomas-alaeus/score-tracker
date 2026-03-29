@@ -1,6 +1,7 @@
 import { GAMES, PLAYER_COLOR_VALUES } from './config.js';
 import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation, updateVpPool } from './render.js';
 import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
+import { getSlot, getCard, getScoreEl } from './dom.js';
 
 // ── State ──
 
@@ -125,8 +126,8 @@ function toggleRotate(id) {
   const p = players.find(p => p.id === id);
   if (!p) return;
   p.rotation = (p.rotation + 90) % 360;
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const slot = getSlot(id);
+  const card = getCard(id);
   if (slot && card) applyRotation(slot, card, p.rotation);
   saveRotations(players);
   saveState(currentGame, gameStartScore, vpPool, players);
@@ -138,8 +139,7 @@ window.addEventListener('resize', () => reapplyAllRotations(players));
 
 function openSettings(id) {
   document.querySelectorAll('.player-card.settings-open').forEach(c => c.classList.remove('settings-open'));
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const card = getCard(id);
   if (card) card.classList.add('settings-open');
 }
 
@@ -155,8 +155,7 @@ function setPlayerColor(id, color) {
   const p = players.find(p => p.id === id);
   if (!p || !currentGame || !currentGame.playerColors) return;
   p.color = color;
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const card = getCard(id);
   if (card) {
     const dot = card.querySelector('.color-dot');
     if (dot) dot.style.background = PLAYER_COLOR_VALUES[color] || '#888';
@@ -201,10 +200,9 @@ function changeScore(id, delta) {
 
   vibrate(isDown && p.score === 0 ? [30, 40, 60] : 18);
 
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const card = getCard(id);
   if (card) {
-    const scoreEl = card.querySelector('.score');
+    const scoreEl = getScoreEl(id);
     if (scoreEl) {
       scoreEl.textContent = p.score;
       scoreEl.classList.remove('score-bump');
@@ -289,8 +287,7 @@ function getDeltaEl(id) {
 }
 
 function getCardScreenInfo(id) {
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const card = getCard(id);
   if (!card) return null;
   const rect = card.getBoundingClientRect();
   return {
@@ -442,8 +439,7 @@ function spHighlightCard(id, cls) {
     .forEach(c => c.classList.remove('sp-highlight', 'sp-highlight-win'));
   document.querySelectorAll('.sp-star').forEach(s => s.remove());
   if (id == null) return;
-  const slot = document.querySelector('.card-slot[data-id="' + id + '"]');
-  const card = slot ? slot.querySelector('.player-card') : null;
+  const card = getCard(id);
   if (!card) return;
   card.classList.add(cls);
   if (cls === 'sp-highlight-win') {
@@ -565,7 +561,7 @@ function startSpTap() {
   if (!picker || !container) return;
 
   const winner = players[Math.floor(Math.random() * players.length)];
-  const slot = document.querySelector('.card-slot[data-id="' + winner.id + '"]');
+  const slot = getSlot(winner.id);
   if (!slot) { spSettleWinner(null, winner.id); return; }
 
   const containerRect = container.getBoundingClientRect();
@@ -659,7 +655,7 @@ function spSettleWinner(x, y) {
   const containerRect = container ? container.getBoundingClientRect() : null;
   let closest = null, minDist = Infinity;
   for (const p of players) {
-    const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
+    const slot = getSlot(p.id);
     if (!slot) continue;
     const slotRect = slot.getBoundingClientRect();
     const cx = slotRect.left + slotRect.width  / 2 - (containerRect ? containerRect.left : 0);

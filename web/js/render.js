@@ -1,4 +1,5 @@
 import { PLAYER_COLOR_VALUES } from './config.js';
+import { getSlot, getCard } from './dom.js';
 
 export function renderTiles(games) {
   const presetsHtml = Object.entries(games).map(([id, game]) => {
@@ -89,8 +90,8 @@ export function applyRotation(slot, card, deg) {
 
 export function reapplyAllRotations(players) {
   players.forEach(p => {
-    const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
-    const card = slot ? slot.querySelector('.player-card') : null;
+    const slot = getSlot(p.id);
+    const card = getCard(p.id);
     if (slot && card) applyRotation(slot, card, p.rotation);
   });
 }
