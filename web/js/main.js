@@ -478,9 +478,20 @@ function spHighlightCard(id, cls) {
   }
 }
 
+const SP_DICE_DOTS = [
+  [[50,50]],                                                                    // 1
+  [[72,28],[28,72]],                                                            // 2
+  [[72,28],[50,50],[28,72]],                                                    // 3
+  [[28,28],[72,28],[28,72],[72,72]],                                            // 4
+  [[28,28],[72,28],[50,50],[28,72],[72,72]],                                    // 5
+  [[28,28],[72,28],[28,50],[72,50],[28,72],[72,72]],                            // 6
+];
+
 function showStartPicker() {
   spHighlightCard(null);
   removeStartPicker();
+  const dots = SP_DICE_DOTS[Math.floor(Math.random() * 6)];
+  const dotsSvg = dots.map(([cx,cy]) => `<circle cx="${cx}" cy="${cy}" r="9" fill="currentColor"/>`).join('');
   const picker = document.createElement('div');
   picker.id = 'start-picker';
   picker.className = 'start-picker sp-idle';
@@ -489,11 +500,7 @@ function showStartPicker() {
     <div class="sp-content">
       <svg class="sp-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="currentColor" stroke-width="7"/>
-        <circle cx="28" cy="28" r="9" fill="currentColor"/>
-        <circle cx="72" cy="28" r="9" fill="currentColor"/>
-        <circle cx="50" cy="50" r="9" fill="currentColor"/>
-        <circle cx="28" cy="72" r="9" fill="currentColor"/>
-        <circle cx="72" cy="72" r="9" fill="currentColor"/>
+        ${dotsSvg}
       </svg>
     </div>`;
   picker.querySelector('.sp-icon').style.animationDelay = `-${Math.random() * 9}s`;
