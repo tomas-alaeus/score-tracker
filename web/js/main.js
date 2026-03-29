@@ -494,30 +494,90 @@ function onSpPickerDown(e) {
   const picker = document.getElementById('start-picker');
   if (!picker || spBounceState) return;
   e.preventDefault();
-  picker.className = 'start-picker sp-flash';
-  vibrate(18);
-  setTimeout(startSpBounce, 1000);
+  picker.setPointerCapture(e.pointerId);
+
+  const container = document.getElementById('players');
+  const containerRect = container.getBoundingClientRect();
+  const pickerRect = picker.getBoundingClientRect();
+  let ballX = pickerRect.left + pickerRect.width / 2 - containerRect.left;
+  let ballY = pickerRect.top + pickerRect.height / 2 - containerRect.top;
+  const r = 78;
+
+  let dragging = false;
+  const trail = [];
+
+  function onMove(me) {
+    trail.push({ x: me.clientX, y: me.clientY, t: performance.now() });
+    if (trail.length > 20) trail.shift();
+
+    if (!dragging && Math.hypot(me.clientX - e.clientX, me.clientY - e.clientY) > 8) {
+      dragging = true;
+      picker.style.left = ballX + 'px';
+      picker.style.top = ballY + 'px';
+      picker.style.transform = 'translate(-50%, -50%)';
+      picker.className = 'start-picker sp-bouncing';
+    }
+    if (dragging) {
+      const rect = container.getBoundingClientRect();
+      ballX = Math.max(r, Math.min(rect.width  - r, me.clientX - rect.left));
+      ballY = Math.max(r, Math.min(rect.height - r, me.clientY - rect.top));
+      picker.style.left = ballX + 'px';
+      picker.style.top  = ballY + 'px';
+    }
+  }
+
+  function onUp() {
+    picker.removeEventListener('pointermove', onMove);
+    picker.removeEventListener('pointerup',    onUp);
+    picker.removeEventListener('pointercancel', onUp);
+
+    if (dragging) {
+      const now = performance.now();
+      const recent = trail.filter(p => now - p.t < 120);
+      let vx = 0, vy = 0;
+      if (recent.length >= 2) {
+        const first = recent[0], last = recent[recent.length - 1];
+        const dt = (last.t - first.t) / 1000;
+        if (dt > 0.01) { vx = (last.x - first.x) / dt; vy = (last.y - first.y) / dt; }
+      }
+      const spd = Math.hypot(vx, vy);
+      const maxSpd = 700, minSpd = 250;
+      if (spd > maxSpd)          { const f = maxSpd / spd; vx *= f; vy *= f; }
+      else if (spd < minSpd)     { const f = minSpd / Math.max(spd, 0.01); vx *= f; vy *= f; }
+      launchSpBounce(ballX, ballY, vx, vy);
+    } else {
+      picker.className = 'start-picker sp-flash';
+      vibrate(18);
+      setTimeout(startSpBounce, 1000);
+    }
+  }
+
+  picker.addEventListener('pointermove', onMove);
+  picker.addEventListener('pointerup',    onUp);
+  picker.addEventListener('pointercancel', onUp);
 }
 
 function startSpBounce() {
   const picker = document.getElementById('start-picker');
   const container = document.getElementById('players');
   if (!picker || !container) return;
-
   const containerRect = container.getBoundingClientRect();
   const pickerRect = picker.getBoundingClientRect();
-  const x = pickerRect.left + pickerRect.width / 2 - containerRect.left;
-  const y = pickerRect.top + pickerRect.height / 2 - containerRect.top;
-
+  const x = pickerRect.left + pickerRect.width  / 2 - containerRect.left;
+  const y = pickerRect.top  + pickerRect.height / 2 - containerRect.top;
   const speed = 490 + Math.random() * 210;
   const angle = Math.random() * Math.PI * 2;
+  launchSpBounce(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed);
+}
 
+function launchSpBounce(x, y, vx, vy) {
+  const picker = document.getElementById('start-picker');
+  if (!picker) return;
   picker.style.left = x + 'px';
-  picker.style.top = y + 'px';
+  picker.style.top  = y + 'px';
   picker.style.transform = 'translate(-50%, -50%)';
   picker.className = 'start-picker sp-bouncing';
-
-  spBounceState = { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, startTime: performance.now(), lastTime: performance.now(), speedAt2s: null, rafId: null };
+  spBounceState = { x, y, vx, vy, startTime: performance.now(), lastTime: performance.now(), speedAt2s: null, rafId: null };
   spBounceState.rafId = requestAnimationFrame(animateSpBounce);
 }
 
