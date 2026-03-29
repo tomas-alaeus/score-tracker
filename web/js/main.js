@@ -541,9 +541,8 @@ function onSpPickerDown(e) {
         if (dt > 0.01) { vx = (last.x - first.x) / dt; vy = (last.y - first.y) / dt; }
       }
       const spd = Math.hypot(vx, vy);
-      const maxSpd = 700, minSpd = 250;
-      if (spd > maxSpd)          { const f = maxSpd / spd; vx *= f; vy *= f; }
-      else if (spd < minSpd)     { const f = minSpd / Math.max(spd, 0.01); vx *= f; vy *= f; }
+      const minSpd = 250;
+      if (spd < minSpd) { const f = minSpd / Math.max(spd, 0.01); vx *= f; vy *= f; }
       launchSpBounce(ballX, ballY, vx, vy);
     } else {
       picker.className = 'start-picker sp-flash';
