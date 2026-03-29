@@ -469,7 +469,6 @@ function spHighlightCard(id, cls) {
   if (cls === 'sp-highlight-win') {
     const star = document.createElement('span');
     star.className = 'sp-star';
-    star.textContent = '★';
     const scoreWrap = card.querySelector('.score-wrap');
     if (scoreWrap) scoreWrap.insertBefore(star, scoreWrap.firstChild);
     setTimeout(() => {
