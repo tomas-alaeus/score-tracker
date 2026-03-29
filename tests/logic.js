@@ -1,4 +1,4 @@
-import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard } from '../web/js/math.js';
+import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard, rotateVelocity } from '../web/js/math.js';
 
 let passed = 0, failed = 0;
 
@@ -73,6 +73,47 @@ console.log('\nfindNearestCard');
   // Equidistant — should return whichever comes first
   const cards = [{ id: 1, x: 0, y: 0 }, { id: 2, x: 200, y: 0 }];
   assert('equidistant picks first card', findNearestCard(100, 0, cards).id === 1);
+}
+
+// ── rotateVelocity (bounce jitter) ──────────────────────────────────────────
+console.log('\nrotateVelocity — speed conservation');
+{
+  const cases = [
+    { vx: 300, vy: 0 },
+    { vx: 0, vy: -400 },
+    { vx: 250, vy: -350 },
+    { vx: -100, vy: 200 },
+  ];
+  for (const { vx, vy } of cases) {
+    const speedBefore = Math.hypot(vx, vy);
+    for (const deg of [-25, -10, 0, 10, 25]) {
+      const r = rotateVelocity(vx, vy, deg);
+      const speedAfter = Math.hypot(r.vx, r.vy);
+      assert(`speed preserved at ${deg}° for (${vx},${vy})`, near(speedBefore, speedAfter));
+    }
+  }
+}
+{
+  // 0° rotation should leave velocity unchanged
+  const r = rotateVelocity(300, -150, 0);
+  assert('0° rotation leaves vx unchanged', near(r.vx, 300));
+  assert('0° rotation leaves vy unchanged', near(r.vy, -150));
+}
+{
+  // 90° rotation: (1,0) → (0,1)
+  const r = rotateVelocity(1, 0, 90);
+  assert('90° rotation rotates correctly (vx)', near(r.vx, 0));
+  assert('90° rotation rotates correctly (vy)', near(r.vy, 1));
+}
+{
+  // Repeated random jitters must not drift speed
+  let vx = 500, vy = 0;
+  const initialSpeed = Math.hypot(vx, vy);
+  for (let i = 0; i < 100; i++) {
+    const deg = (Math.random() * 2 - 1) * 25;
+    ({ vx, vy } = rotateVelocity(vx, vy, deg));
+  }
+  assert('speed unchanged after 100 random jitters', near(Math.hypot(vx, vy), initialSpeed));
 }
 
 // ── Summary ─────────────────────────────────────────────────────────────────

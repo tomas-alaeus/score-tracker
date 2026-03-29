@@ -2,7 +2,7 @@ import { GAMES, PLAYER_COLOR_VALUES } from './config.js';
 import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation, updateVpPool } from './render.js';
 import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
 import { getSlot, getCard, getScoreEl } from './dom.js';
-import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard } from './math.js';
+import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard, rotateVelocity } from './math.js';
 
 // ── Constants ──
 
@@ -654,11 +654,8 @@ function animateSpBounce(now) {
   if (state.y < r)     { state.y = r;     state.vy =  Math.abs(state.vy); bounced = true; }
   if (state.y > H - r) { state.y = H - r; state.vy = -Math.abs(state.vy); bounced = true; }
   if (bounced) {
-    const jitter = (Math.random() * 2 - 1) * SP.BOUNCE_JITTER_DEG * Math.PI / 180;
-    const cos = Math.cos(jitter), sin = Math.sin(jitter);
-    const nvx = state.vx * cos - state.vy * sin;
-    const nvy = state.vx * sin + state.vy * cos;
-    state.vx = nvx; state.vy = nvy;
+    const jitterDeg = (Math.random() * 2 - 1) * SP.BOUNCE_JITTER_DEG;
+    ({ vx: state.vx, vy: state.vy } = rotateVelocity(state.vx, state.vy, jitterDeg));
     vibrate(HAPTIC.BOUNCE);
   }
 

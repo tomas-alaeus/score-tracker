@@ -32,6 +32,14 @@ export function spDecelFactor(elapsed, decelStart, decelDuration) {
   return Math.max(0, Math.min(1, 1 - (elapsed - decelStart) / decelDuration));
 }
 
+// Rotate a 2D velocity vector by angleDeg degrees.
+// A pure rotation preserves speed — use this for bounce jitter.
+export function rotateVelocity(vx, vy, angleDeg) {
+  const rad = angleDeg * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  return { vx: vx * cos - vy * sin, vy: vx * sin + vy * cos };
+}
+
 // Nearest-card finder — given a ball position and an array of { id, x, y } card centres,
 // returns the card with the smallest Euclidean distance.
 export function findNearestCard(ballX, ballY, cards) {
