@@ -517,7 +517,7 @@ function startSpBounce() {
   picker.style.transform = 'translate(-50%, -50%)';
   picker.className = 'start-picker sp-bouncing';
 
-  spBounceState = { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, startTime: performance.now(), lastTime: performance.now(), rafId: null };
+  spBounceState = { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, startTime: performance.now(), lastTime: performance.now(), speedAt2s: null, rafId: null };
   spBounceState.rafId = requestAnimationFrame(animateSpBounce);
 }
 
@@ -532,10 +532,11 @@ function animateSpBounce(now) {
   state.lastTime = now;
   const elapsed = (now - state.startTime) / 1000;
 
-  if (elapsed > 4) {
-    const decay = Math.pow(0.08, dt);
-    state.vx *= decay;
-    state.vy *= decay;
+  if (elapsed >= 2) {
+    if (!state.speedAt2s) state.speedAt2s = Math.hypot(state.vx, state.vy);
+    const factor = Math.max(0, 1 - (elapsed - 2) / 2);
+    const cur = Math.hypot(state.vx, state.vy);
+    if (cur > 0) { const s = state.speedAt2s * factor / cur; state.vx *= s; state.vy *= s; }
   }
 
   state.x += state.vx * dt;
@@ -554,15 +555,14 @@ function animateSpBounce(now) {
     const cos = Math.cos(jitter), sin = Math.sin(jitter);
     const nvx = state.vx * cos - state.vy * sin;
     const nvy = state.vx * sin + state.vy * cos;
-    const speedMod = 0.9 + Math.random() * 0.2;
-    state.vx = nvx * speedMod; state.vy = nvy * speedMod;
+    state.vx = nvx; state.vy = nvy;
     vibrate(12);
   }
 
   picker.style.left = state.x + 'px';
   picker.style.top  = state.y + 'px';
 
-  if (elapsed > 4 && Math.hypot(state.vx, state.vy) < 8) {
+  if (elapsed >= 4) {
     spSettleWinner(state.x, state.y);
     return;
   }
