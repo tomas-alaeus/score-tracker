@@ -547,7 +547,7 @@ function onSpPickerDown(e) {
     } else {
       picker.className = 'start-picker sp-flash';
       vibrate(18);
-      setTimeout(startSpBounce, 1000);
+      setTimeout(startSpTap, 1000);
     }
   }
 
@@ -556,17 +556,39 @@ function onSpPickerDown(e) {
   picker.addEventListener('pointercancel', onUp);
 }
 
-function startSpBounce() {
+function startSpTap() {
   const picker = document.getElementById('start-picker');
   const container = document.getElementById('players');
   if (!picker || !container) return;
+
+  const winner = players[Math.floor(Math.random() * players.length)];
+  const slot = document.querySelector('.card-slot[data-id="' + winner.id + '"]');
+  if (!slot) { spSettleWinner(null, winner.id); return; }
+
   const containerRect = container.getBoundingClientRect();
+  const slotRect = slot.getBoundingClientRect();
+  const targetX = slotRect.left + slotRect.width  / 2 - containerRect.left;
+  const targetY = slotRect.top  + slotRect.height / 2 - containerRect.top;
+
   const pickerRect = picker.getBoundingClientRect();
-  const x = pickerRect.left + pickerRect.width  / 2 - containerRect.left;
-  const y = pickerRect.top  + pickerRect.height / 2 - containerRect.top;
-  const speed = 490 + Math.random() * 210;
-  const angle = Math.random() * Math.PI * 2;
-  launchSpBounce(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed);
+  const startX = pickerRect.left + pickerRect.width  / 2 - containerRect.left;
+  const startY = pickerRect.top  + pickerRect.height / 2 - containerRect.top;
+
+  picker.style.left = startX + 'px';
+  picker.style.top  = startY + 'px';
+  picker.style.transform = 'translate(-50%, -50%)';
+  picker.className = 'start-picker sp-bouncing';
+
+  requestAnimationFrame(() => {
+    picker.style.transition = 'left 0.65s ease-in-out, top 0.65s ease-in-out';
+    picker.style.left = targetX + 'px';
+    picker.style.top  = targetY + 'px';
+  });
+
+  picker.addEventListener('transitionend', () => {
+    picker.style.transition = '';
+    spSettleWinner(null, winner.id);
+  }, { once: true });
 }
 
 function launchSpBounce(x, y, vx, vy) {
@@ -622,26 +644,31 @@ function animateSpBounce(now) {
   picker.style.top  = state.y + 'px';
 
   if (elapsed >= 4) {
-    spSettleWinner(state.x, state.y);
+    spSettleWinner(state.x, state.y, null);
     return;
   }
   state.rafId = requestAnimationFrame(animateSpBounce);
 }
 
-function spSettleWinner(x, y) {
+function spSettleWinner(x, y, winnerId = null) {
   spBounceState = null;
-  const container = document.getElementById('players');
-  const containerRect = container ? container.getBoundingClientRect() : null;
+  let closest = null;
 
-  let closest = null, minDist = Infinity;
-  for (const p of players) {
-    const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
-    if (!slot) continue;
-    const slotRect = slot.getBoundingClientRect();
-    const cx = slotRect.left + slotRect.width / 2 - (containerRect ? containerRect.left : 0);
-    const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
-    const d = Math.hypot(x - cx, y - cy);
-    if (d < minDist) { minDist = d; closest = p; }
+  if (winnerId != null) {
+    closest = players.find(p => p.id === winnerId) ?? null;
+  } else {
+    const container = document.getElementById('players');
+    const containerRect = container ? container.getBoundingClientRect() : null;
+    let minDist = Infinity;
+    for (const p of players) {
+      const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
+      if (!slot) continue;
+      const slotRect = slot.getBoundingClientRect();
+      const cx = slotRect.left + slotRect.width  / 2 - (containerRect ? containerRect.left : 0);
+      const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
+      const d = Math.hypot(x - cx, y - cy);
+      if (d < minDist) { minDist = d; closest = p; }
+    }
   }
 
   if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate([30, 60, 80]); }
