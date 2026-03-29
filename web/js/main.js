@@ -3,6 +3,51 @@ import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHig
 import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
 import { getSlot, getCard, getScoreEl } from './dom.js';
 
+// ── Constants ──
+
+const DELTA = {
+  EDGE_SCALE:     0.65,   // how far toward card edge (fraction of edge distance)
+  FALLBACK_Y:     0.38,   // Y offset as fraction of card height when touch is near centre
+  SMOOTH_TIME:    0.18,   // SmoothDamp smooth time in seconds
+  SNAP_THRESHOLD: 0.5,    // stop animating when within this many px of target
+  VISIBLE_MS:     2000,   // how long the delta number stays on screen
+  FADE:           '0.4s', // CSS fade-out duration
+};
+
+const HOLD = {
+  INITIAL_DELAY_MS:  400, // delay before first repeat fires
+  START_INTERVAL_MS: 300, // initial repeat interval
+  MIN_INTERVAL_MS:   60,  // fastest possible repeat rate
+  DECAY:             0.8, // factor by which interval shrinks each repeat
+};
+
+const SP = {
+  BALL_RADIUS:       78,      // picker circle radius in px (half of 156px diameter)
+  DRAG_THRESHOLD:    8,       // px of movement before drag mode activates
+  TRAIL_MAX:         20,      // max positions kept in flick trail
+  TRAIL_WINDOW_MS:   120,     // how far back to look when computing flick velocity
+  FLICK_MIN_DT:      0.01,    // minimum time window (s) for velocity calculation
+  LAUNCH_MIN_SPEED:  250,     // minimum ball launch speed in px/s
+  DECEL_START_S:     2,       // seconds after launch when deceleration begins
+  DECEL_DURATION_S:  2,       // seconds the deceleration phase lasts
+  BOUNCE_JITTER_DEG: 25,      // random angle perturbation on each wall bounce (degrees)
+  FLASH_MS:          1000,    // flash duration before tap-glide starts
+  TAP_GLIDE:         '0.65s', // CSS transition duration for tap-path glide
+  SETTLE_REMOVE_MS:  800,     // delay before removing picker after it settles
+  STAR_VISIBLE_MS:   5000,    // how long the winner star is shown
+  STAR_FADE_MS:      700,     // winner star fade-out animation duration
+};
+
+const HAPTIC = {
+  SCORE:   18,           // normal score change
+  ZERO:    80,           // hitting zero in down-count mode
+  ELIM:    [30, 40, 60], // elimination pattern
+  BOUNCE:  12,           // ball hits wall
+  WINNER:  [30, 60, 80], // winner selected
+};
+
+const MAX_DT = 0.05; // frame time cap in seconds — prevents huge jumps after tab switch
+
 // ── State ──
 
 let players = [];
@@ -193,12 +238,12 @@ function changeScore(id, delta) {
   if (!p) return;
 
   const isDown = currentGame && currentGame.direction === 'down';
-  if (isDown && delta < 0 && p.score === 0) { vibrate(80); return; }
+  if (isDown && delta < 0 && p.score === 0) { vibrate(HAPTIC.ZERO); return; }
 
   p.score += delta;
   if (isDown && p.score < 0) p.score = 0;
 
-  vibrate(isDown && p.score === 0 ? [30, 40, 60] : 18);
+  vibrate(isDown && p.score === 0 ? HAPTIC.ELIM : HAPTIC.SCORE);
 
   const card = getCard(id);
   if (card) {
@@ -245,7 +290,7 @@ function getFarSideOffset(event, card) {
   const localY = -fdx * Math.sin(R) + fdy * Math.cos(R);
 
   const mag = Math.sqrt(localX * localX + localY * localY);
-  if (mag < 1) return { x: 0, y: -(cardH * 0.38) };
+  if (mag < 1) return { x: 0, y: -(cardH * DELTA.FALLBACK_Y) };
 
   const nx = localX / mag, ny = localY / mag;
 
@@ -253,7 +298,7 @@ function getFarSideOffset(event, card) {
   const hw = cardW / 2, hh = cardH / 2;
   const tx = Math.abs(nx) > 0.001 ? hw / Math.abs(nx) : Infinity;
   const ty = Math.abs(ny) > 0.001 ? hh / Math.abs(ny) : Infinity;
-  const t = Math.min(tx, ty) * 0.65;
+  const t = Math.min(tx, ty) * DELTA.EDGE_SCALE;
 
   return { x: nx * t, y: ny * t };
 }
@@ -316,17 +361,17 @@ function animateDelta(id) {
   if (!info) { s.rafId = null; return; }
 
   const now = performance.now();
-  const dt = Math.min((now - s.lastTime) / 1000, 0.05);
+  const dt = Math.min((now - s.lastTime) / 1000, MAX_DT);
   s.lastTime = now;
 
-  const rx = smoothDamp(s.cur.x, s.offset.x, s.vel.x, 0.18, dt);
-  const ry = smoothDamp(s.cur.y, s.offset.y, s.vel.y, 0.18, dt);
+  const rx = smoothDamp(s.cur.x, s.offset.x, s.vel.x, DELTA.SMOOTH_TIME, dt);
+  const ry = smoothDamp(s.cur.y, s.offset.y, s.vel.y, DELTA.SMOOTH_TIME, dt);
   s.cur.x = rx.value; s.vel.x = rx.velocity;
   s.cur.y = ry.value; s.vel.y = ry.velocity;
 
   placeDeltaEl(el, info.cx, info.cy, s.cur.x, s.cur.y, info.R);
 
-  if (Math.abs(s.offset.x - s.cur.x) > 0.5 || Math.abs(s.offset.y - s.cur.y) > 0.5) {
+  if (Math.abs(s.offset.x - s.cur.x) > DELTA.SNAP_THRESHOLD || Math.abs(s.offset.y - s.cur.y) > DELTA.SNAP_THRESHOLD) {
     s.rafId = requestAnimationFrame(() => animateDelta(id));
   } else {
     s.cur.x = s.offset.x; s.cur.y = s.offset.y;
@@ -373,10 +418,10 @@ function showDelta(id, delta) {
 
   s.timer = setTimeout(() => {
     if (s.rafId) { cancelAnimationFrame(s.rafId); s.rafId = null; }
-    el.style.transition = 'opacity 0.4s ease';
+    el.style.transition = `opacity ${DELTA.FADE} ease`;
     el.style.opacity = '0';
     s.value = 0;
-  }, 2000);
+  }, DELTA.VISIBLE_MS);
 }
 
 // ── Hold-to-repeat (per-pointer so multiple touches work independently) ──
@@ -390,16 +435,15 @@ function startHold(event, id, delta, el) {
   if (!deltaState[id]) deltaState[id] = { value: 0, timer: null, offset, cur: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, rafId: null, lastTime: 0 };
   else deltaState[id].offset = offset;
   changeScore(id, delta);
-  let interval = 300;
-  const minInterval = 60;
+  let interval = HOLD.START_INTERVAL_MS;
   const state = { el };
   holds.set(pointerId, state);
   state.timeout = setTimeout(function repeat() {
     if (!holds.has(pointerId)) return;
     changeScore(id, delta);
-    interval = Math.max(minInterval, interval * 0.8);
+    interval = Math.max(HOLD.MIN_INTERVAL_MS, interval * HOLD.DECAY);
     state.timeout = setTimeout(repeat, interval);
-  }, 400);
+  }, HOLD.INITIAL_DELAY_MS);
 }
 
 function stopHold(pointerId) {
@@ -450,8 +494,8 @@ function spHighlightCard(id, cls) {
     if (scoreWrap) scoreWrap.insertBefore(star, scoreWrap.firstChild);
     setTimeout(() => {
       star.classList.add('sp-star-out');
-      setTimeout(() => star.remove(), 700);
-    }, 5000);
+      setTimeout(() => star.remove(), SP.STAR_FADE_MS);
+    }, SP.STAR_VISIBLE_MS);
   }
 }
 
@@ -497,16 +541,16 @@ function onSpPickerDown(e) {
   const pickerRect = picker.getBoundingClientRect();
   let ballX = pickerRect.left + pickerRect.width / 2 - containerRect.left;
   let ballY = pickerRect.top + pickerRect.height / 2 - containerRect.top;
-  const r = 78;
+  const r = SP.BALL_RADIUS;
 
   let dragging = false;
   const trail = [];
 
   function onMove(me) {
     trail.push({ x: me.clientX, y: me.clientY, t: performance.now() });
-    if (trail.length > 20) trail.shift();
+    if (trail.length > SP.TRAIL_MAX) trail.shift();
 
-    if (!dragging && Math.hypot(me.clientX - e.clientX, me.clientY - e.clientY) > 8) {
+    if (!dragging && Math.hypot(me.clientX - e.clientX, me.clientY - e.clientY) > SP.DRAG_THRESHOLD) {
       dragging = true;
       picker.style.left = ballX + 'px';
       picker.style.top = ballY + 'px';
@@ -529,24 +573,23 @@ function onSpPickerDown(e) {
 
     if (dragging) {
       const now = performance.now();
-      const recent = trail.filter(p => now - p.t < 120);
+      const recent = trail.filter(p => now - p.t < SP.TRAIL_WINDOW_MS);
       let vx = 0, vy = 0;
       if (recent.length >= 2) {
         const first = recent[0], last = recent[recent.length - 1];
         const dt = (last.t - first.t) / 1000;
-        if (dt > 0.01) { vx = (last.x - first.x) / dt; vy = (last.y - first.y) / dt; }
+        if (dt > SP.FLICK_MIN_DT) { vx = (last.x - first.x) / dt; vy = (last.y - first.y) / dt; }
       }
       const spd = Math.hypot(vx, vy);
-      const minSpd = 250;
-      if (spd < minSpd) {
-        if (spd > 0.01) { const f = minSpd / spd; vx *= f; vy *= f; }
-        else { const a = Math.random() * Math.PI * 2; vx = Math.cos(a) * minSpd; vy = Math.sin(a) * minSpd; }
+      if (spd < SP.LAUNCH_MIN_SPEED) {
+        if (spd > 0.01) { const f = SP.LAUNCH_MIN_SPEED / spd; vx *= f; vy *= f; }
+        else { const a = Math.random() * Math.PI * 2; vx = Math.cos(a) * SP.LAUNCH_MIN_SPEED; vy = Math.sin(a) * SP.LAUNCH_MIN_SPEED; }
       }
       launchSpBounce(ballX, ballY, vx, vy);
     } else {
       picker.className = 'start-picker sp-flash';
-      vibrate(18);
-      setTimeout(startSpTap, 1000);
+      vibrate(HAPTIC.SCORE);
+      setTimeout(startSpTap, SP.FLASH_MS);
     }
   }
 
@@ -579,7 +622,7 @@ function startSpTap() {
   picker.className = 'start-picker sp-bouncing';
 
   requestAnimationFrame(() => {
-    picker.style.transition = 'left 0.65s ease-in-out, top 0.65s ease-in-out';
+    picker.style.transition = `left ${SP.TAP_GLIDE} ease-in-out, top ${SP.TAP_GLIDE} ease-in-out`;
     picker.style.left = targetX + 'px';
     picker.style.top  = targetY + 'px';
   });
@@ -608,13 +651,13 @@ function animateSpBounce(now) {
   const container = document.getElementById('players');
   if (!picker || !container) { spBounceState = null; return; }
 
-  const dt = Math.min((now - state.lastTime) / 1000, 0.05);
+  const dt = Math.min((now - state.lastTime) / 1000, MAX_DT);
   state.lastTime = now;
   const elapsed = (now - state.startTime) / 1000;
 
-  if (elapsed >= 2) {
+  if (elapsed >= SP.DECEL_START_S) {
     if (!state.speedAt2s) state.speedAt2s = Math.hypot(state.vx, state.vy);
-    const factor = Math.max(0, 1 - (elapsed - 2) / 2);
+    const factor = Math.max(0, 1 - (elapsed - SP.DECEL_START_S) / SP.DECEL_DURATION_S);
     const cur = Math.hypot(state.vx, state.vy);
     if (cur > 0) { const s = state.speedAt2s * factor / cur; state.vx *= s; state.vy *= s; }
   }
@@ -622,7 +665,7 @@ function animateSpBounce(now) {
   state.x += state.vx * dt;
   state.y += state.vy * dt;
 
-  const r = 78;
+  const r = SP.BALL_RADIUS;
   const W = container.offsetWidth;
   const H = container.offsetHeight;
   let bounced = false;
@@ -631,18 +674,18 @@ function animateSpBounce(now) {
   if (state.y < r)     { state.y = r;     state.vy =  Math.abs(state.vy); bounced = true; }
   if (state.y > H - r) { state.y = H - r; state.vy = -Math.abs(state.vy); bounced = true; }
   if (bounced) {
-    const jitter = (Math.random() * 2 - 1) * 25 * Math.PI / 180;
+    const jitter = (Math.random() * 2 - 1) * SP.BOUNCE_JITTER_DEG * Math.PI / 180;
     const cos = Math.cos(jitter), sin = Math.sin(jitter);
     const nvx = state.vx * cos - state.vy * sin;
     const nvy = state.vx * sin + state.vy * cos;
     state.vx = nvx; state.vy = nvy;
-    vibrate(12);
+    vibrate(HAPTIC.BOUNCE);
   }
 
   picker.style.left = state.x + 'px';
   picker.style.top  = state.y + 'px';
 
-  if (elapsed >= 4) {
+  if (elapsed >= SP.DECEL_START_S + SP.DECEL_DURATION_S) {
     spSettleWinner(state.x, state.y);
     return;
   }
@@ -664,7 +707,7 @@ function spSettleWinner(x, y) {
     if (d < minDist) { minDist = d; closest = p; }
   }
 
-  if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate([30, 60, 80]); }
+  if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate(HAPTIC.WINNER); }
 
   const picker = document.getElementById('start-picker');
   if (picker) {
@@ -673,7 +716,7 @@ function spSettleWinner(x, y) {
       const p = document.getElementById('start-picker');
       if (p) p.remove();
       document.getElementById('randomize-btn').style.display = 'block';
-    }, 800);
+    }, SP.SETTLE_REMOVE_MS);
   }
 }
 
