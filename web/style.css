@@ -383,11 +383,17 @@ body::after {
 }
 
 .sp-icon {
-  font-size: 5.5rem;
-  line-height: 1;
-  font-family: 'Cinzel', serif;
+  display: block;
+  width: 78px;
+  height: 78px;
   color: var(--accent);
-  text-shadow: 0 0 14px var(--accent);
+  filter: drop-shadow(0 0 10px var(--accent));
+  animation: spDiceSpin 9s linear infinite;
+}
+
+@keyframes spDiceSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .sp-label {

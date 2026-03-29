@@ -488,8 +488,16 @@ function showStartPicker() {
   picker.innerHTML = `
     <div class="sp-ring"></div>
     <div class="sp-content">
-      <span class="sp-icon">?</span>
+      <svg class="sp-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="currentColor" stroke-width="7"/>
+        <circle cx="28" cy="28" r="9" fill="currentColor"/>
+        <circle cx="72" cy="28" r="9" fill="currentColor"/>
+        <circle cx="50" cy="50" r="9" fill="currentColor"/>
+        <circle cx="28" cy="72" r="9" fill="currentColor"/>
+        <circle cx="72" cy="72" r="9" fill="currentColor"/>
+      </svg>
     </div>`;
+  picker.querySelector('.sp-icon').style.animationDelay = `-${Math.random() * 9}s`;
   picker.addEventListener('pointerdown', onSpPickerDown);
   document.getElementById('players').appendChild(picker);
   document.getElementById('randomize-btn').style.display = 'none';
