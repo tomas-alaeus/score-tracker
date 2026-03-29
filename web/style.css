@@ -430,9 +430,15 @@ body::after {
   to   { box-shadow: 0 0 26px var(--accent), 0 0 55px color-mix(in srgb, var(--accent) 55%, transparent); }
 }
 
-/* Settled — burst ring then hidden by JS */
+/* Settled — burst ring then fade out, hidden by JS */
 .sp-settled {
   transform: translate(-50%, -50%);
+  animation: spPickerFadeOut 0.5s ease 0.75s forwards;
+}
+
+@keyframes spPickerFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 .sp-settled .sp-ring {
@@ -789,13 +795,19 @@ body::after {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 2px;
   color: var(--accent, #9070e8);
-  padding: 14px 16px;
+  padding: 10px 12px;
   font-family: system-ui, sans-serif;
   font-size: 0.9rem;
   line-height: 1;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
-  text-shadow: 0 0 6px var(--accent, #9070e8);
+}
+
+.rng-dice {
+  display: block;
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 4px var(--accent, #9070e8));
 }
 
 #randomize-btn:hover { border-color: var(--accent, #7050c8); color: var(--accent, #7050c8); }

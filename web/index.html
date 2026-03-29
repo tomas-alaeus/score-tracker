@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Score Tracker</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=20260329k">
+  <link rel="stylesheet" href="style.css?v=20260329l">
   <meta name="theme-color" content="#0c0c15">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,16 @@
 <body>
 
   <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Fullscreen">⤢</button>
-  <button id="randomize-btn" onclick="reopenStartPicker()" title="Randomize first player">✦</button>
+  <button id="randomize-btn" onclick="reopenStartPicker()" title="Randomize first player">
+    <svg class="rng-dice" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="currentColor" stroke-width="7"/>
+      <circle cx="28" cy="28" r="9" fill="currentColor"/>
+      <circle cx="72" cy="28" r="9" fill="currentColor"/>
+      <circle cx="50" cy="50" r="9" fill="currentColor"/>
+      <circle cx="28" cy="72" r="9" fill="currentColor"/>
+      <circle cx="72" cy="72" r="9" fill="currentColor"/>
+    </svg>
+  </button>
 
   <!-- ── GAME SELECT ── -->
   <div id="game-select">
@@ -41,6 +50,6 @@
   </div>
 
   <div id="delta-layer"></div>
-  <script type="module" src="js/main.js?v=20260329k"></script>
+  <script type="module" src="js/main.js?v=20260329l"></script>
 </body>
 </html>

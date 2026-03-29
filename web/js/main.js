@@ -34,7 +34,7 @@ const SP = {
   BOUNCE_JITTER_DEG: 25,      // random angle perturbation on each wall bounce (degrees)
   FLASH_MS:          1000,    // flash duration before tap-glide starts
   TAP_GLIDE:         '0.65s', // CSS transition duration for tap-path glide
-  SETTLE_REMOVE_MS:  800,     // delay before removing picker after it settles
+  SETTLE_REMOVE_MS: 1400,     // delay before removing picker after it settles (burst 0.75s + fade 0.5s + buffer)
   STAR_VISIBLE_MS:   5000,    // how long the winner star is shown
   STAR_FADE_MS:      700,     // winner star fade-out animation duration
 };
