@@ -587,7 +587,7 @@ function startSpTap() {
 
   picker.addEventListener('transitionend', () => {
     picker.style.transition = '';
-    spSettleWinner(null, winner.id);
+    spSettleWinner(targetX, targetY);
   }, { once: true });
 }
 
@@ -644,31 +644,25 @@ function animateSpBounce(now) {
   picker.style.top  = state.y + 'px';
 
   if (elapsed >= 4) {
-    spSettleWinner(state.x, state.y, null);
+    spSettleWinner(state.x, state.y);
     return;
   }
   state.rafId = requestAnimationFrame(animateSpBounce);
 }
 
-function spSettleWinner(x, y, winnerId = null) {
+function spSettleWinner(x, y) {
   spBounceState = null;
-  let closest = null;
-
-  if (winnerId != null) {
-    closest = players.find(p => p.id === winnerId) ?? null;
-  } else {
-    const container = document.getElementById('players');
-    const containerRect = container ? container.getBoundingClientRect() : null;
-    let minDist = Infinity;
-    for (const p of players) {
-      const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
-      if (!slot) continue;
-      const slotRect = slot.getBoundingClientRect();
-      const cx = slotRect.left + slotRect.width  / 2 - (containerRect ? containerRect.left : 0);
-      const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
-      const d = Math.hypot(x - cx, y - cy);
-      if (d < minDist) { minDist = d; closest = p; }
-    }
+  const container = document.getElementById('players');
+  const containerRect = container ? container.getBoundingClientRect() : null;
+  let closest = null, minDist = Infinity;
+  for (const p of players) {
+    const slot = document.querySelector('.card-slot[data-id="' + p.id + '"]');
+    if (!slot) continue;
+    const slotRect = slot.getBoundingClientRect();
+    const cx = slotRect.left + slotRect.width  / 2 - (containerRect ? containerRect.left : 0);
+    const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
+    const d = Math.hypot(x - cx, y - cy);
+    if (d < minDist) { minDist = d; closest = p; }
   }
 
   if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate([30, 60, 80]); }
