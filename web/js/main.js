@@ -2,6 +2,7 @@ import { GAMES, PLAYER_COLOR_VALUES } from './config.js';
 import { render, renderTiles, renderConfig, reapplyAllRotations, updateLeaderHighlight, applyRotation, updateVpPool } from './render.js';
 import { saveState, restoreState, saveRotations, loadRotations } from './persist.js';
 import { getSlot, getCard, getScoreEl } from './dom.js';
+import { smoothDamp, shuffleArray, spDecelFactor, findNearestCard } from './math.js';
 
 // ── Constants ──
 
@@ -219,13 +220,6 @@ document.addEventListener('pointerdown', e => {
 
 // ── Players ──
 
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 
 function createPlayer(name, rotation = 0, color = null) {
   return { id: Date.now() + Math.random(), name, score: gameStartScore, rotation, color };
@@ -303,20 +297,6 @@ function getFarSideOffset(event, card) {
   return { x: nx * t, y: ny * t };
 }
 
-// SmoothDamp — matches Unity's Mathf.SmoothDamp behaviour.
-function smoothDamp(current, target, velocity, smoothTime, dt) {
-  smoothTime = Math.max(0.0001, smoothTime);
-  const omega = 2 / smoothTime;
-  const x = omega * dt;
-  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
-  const change = current - target;
-  const temp = (velocity + omega * change) * dt;
-  let newVel = (velocity - omega * temp) * exp;
-  let out = target + (change + temp) * exp;
-  // Prevent overshoot
-  if ((target - current > 0) === (out > target)) { out = target; newVel = 0; }
-  return { value: out, velocity: newVel };
-}
 
 function getDeltaEl(id) {
   const elId = 'delta-' + id;
@@ -657,7 +637,7 @@ function animateSpBounce(now) {
 
   if (elapsed >= SP.DECEL_START_S) {
     if (!state.speedAt2s) state.speedAt2s = Math.hypot(state.vx, state.vy);
-    const factor = Math.max(0, 1 - (elapsed - SP.DECEL_START_S) / SP.DECEL_DURATION_S);
+    const factor = spDecelFactor(elapsed, SP.DECEL_START_S, SP.DECEL_DURATION_S);
     const cur = Math.hypot(state.vx, state.vy);
     if (cur > 0) { const s = state.speedAt2s * factor / cur; state.vx *= s; state.vy *= s; }
   }
@@ -696,16 +676,14 @@ function spSettleWinner(x, y) {
   spBounceState = null;
   const container = document.getElementById('players');
   const containerRect = container ? container.getBoundingClientRect() : null;
-  let closest = null, minDist = Infinity;
-  for (const p of players) {
+  const cards = players.map(p => {
     const slot = getSlot(p.id);
-    if (!slot) continue;
-    const slotRect = slot.getBoundingClientRect();
-    const cx = slotRect.left + slotRect.width  / 2 - (containerRect ? containerRect.left : 0);
-    const cy = slotRect.top  + slotRect.height / 2 - (containerRect ? containerRect.top  : 0);
-    const d = Math.hypot(x - cx, y - cy);
-    if (d < minDist) { minDist = d; closest = p; }
-  }
+    if (!slot) return null;
+    const r = slot.getBoundingClientRect();
+    return { id: p.id, x: r.left + r.width / 2 - (containerRect ? containerRect.left : 0), y: r.top + r.height / 2 - (containerRect ? containerRect.top : 0) };
+  }).filter(Boolean);
+  const nearest = findNearestCard(x, y, cards);
+  const closest = nearest ? players.find(p => p.id === nearest.id) : null;
 
   if (closest) { spHighlightCard(closest.id, 'sp-highlight-win'); vibrate(HAPTIC.WINNER); }
 

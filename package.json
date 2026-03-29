@@ -1,0 +1,8 @@
+{
+  "name": "scoretracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "node --check web/js/main.js web/js/render.js web/js/config.js web/js/persist.js web/js/dom.js web/js/math.js && node tests/logic.js"
+  }
+}
