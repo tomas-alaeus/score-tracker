@@ -342,6 +342,7 @@ body::after {
   height: 156px;
   z-index: 20;
   cursor: pointer;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
   display: flex;
   align-items: center;
